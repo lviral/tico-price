@@ -1,26 +1,54 @@
-import re
-from typing import Iterator
+"""Scraper para tiendas con plataforma VTEX (Walmart CR, Siman CR).
+
+Consume el endpoint público de búsqueda de catálogo:
+  GET {base_url}/api/catalog_system/pub/products/search
+      ?fq=C:/{numeric_category_path}/&_from=N&_to=N+49&O=OrderByReleaseDateDESC
+
+VTEX requiere IDs numéricos en el filtro fq. El árbol de categorías se
+obtiene de:
+  GET {base_url}/api/catalog_system/pub/category/tree/{depth}
+
+Ejemplo Walmart CR:
+  Electrónica (12) → Línea Blanca (61) → fq=C:/12/61/
+"""
+
+import logging
+import time
 
 import httpx
 
-from .base import BaseScraper, ProductData
+log = logging.getLogger(__name__)
 
-_VTEX_SEARCH_PATH = "/api/catalog_system/pub/products/search"
+_SEARCH_PATH = "/api/catalog_system/pub/products/search"
+_TREE_PATH = "/api/catalog_system/pub/category/tree"
 _PAGE_SIZE = 50
+_MAX_RETRIES = 3
+_RETRY_BACKOFF = 2  # segundos
 
 
 def _parse_price(value: int | float | None) -> float | None:
     return float(value) if value is not None else None
 
 
-class VtexScraper(BaseScraper):
-    """Scraper for VTEX storefronts (Walmart CR, Siman CR).
+def _discount_pct(price: float, list_price: float | None) -> float | None:
+    if list_price and list_price > price:
+        return round((1 - price / list_price) * 100, 1)
+    return None
 
-    Uses the VTEX Catalog Search API instead of HTML parsing.
+
+class VtexScraper:
+    """Scraper para plataforma VTEX.
+
+    Params
+    ------
+    store_id : id interno de la tienda en la BD local.
+    base_url : URL raíz de la tienda, sin trailing slash.
+               Ej.: "https://www.walmart.co.cr"
     """
 
     def __init__(self, store_id: int, base_url: str) -> None:
-        super().__init__(store_id, base_url)
+        self.store_id = store_id
+        self.base_url = base_url.rstrip("/")
         self._client = httpx.Client(
             headers={
                 "User-Agent": "Mozilla/5.0 (precio-tracker-cr/1.0)",
@@ -29,84 +57,200 @@ class VtexScraper(BaseScraper):
             follow_redirects=True,
             timeout=30,
         )
+        # cache: nombre_segmento_lower → id numérico
+        self._cat_id_cache: dict[str, str] = {}
 
     # ------------------------------------------------------------------
-    # Public interface
+    # Interfaz pública
     # ------------------------------------------------------------------
 
-    def scrape_category(self, category_path: str) -> Iterator[ProductData]:
-        """category_path: e.g. '/electrodomesticos' or a VTEX category ID."""
+    def scrape_category(self, category_path: str) -> list[dict]:
+        """Pagina de 50 en 50 hasta agotar resultados.
+
+        Params
+        ------
+        category_path : ruta semántica o numérica.
+                        Semántica: "/electronica/linea-blanca"
+                        Numérica:  "/12/61"   (más rápido, sin resolución)
+
+        Returns
+        -------
+        Lista de dicts con: sku, name, url, price, original_price,
+        discount_pct, in_stock, category.
+        """
+        numeric_path = self._resolve_category_path(category_path)
+        log.info("[%s] categoría=%s → path numérico=%s", self.base_url, category_path, numeric_path)
+
+        results: list[dict] = []
         from_idx = 0
+
         while True:
-            items = self._search(category_path, from_idx, from_idx + _PAGE_SIZE - 1)
-            if not items:
+            to_idx = from_idx + _PAGE_SIZE - 1
+            page = self._fetch_page(numeric_path, from_idx, to_idx)
+
+            if not page:
+                log.info(
+                    "[%s] _from=%d → 0 productos, fin de paginación (total=%d)",
+                    self.base_url, from_idx, len(results),
+                )
                 break
-            for item in items:
+
+            parsed = []
+            for raw in page:
                 try:
-                    yield self._parse_item(item)
-                except Exception:
-                    continue
+                    parsed.append(self._parse_item(raw, category_path))
+                except Exception as exc:
+                    log.warning("Error parseando producto %s: %s", raw.get("productId"), exc)
+
+            log.info(
+                "[%s] _from=%d _to=%d → %d productos (acum. %d)",
+                self.base_url, from_idx, to_idx, len(parsed), len(results) + len(parsed),
+            )
+
+            results.extend(parsed)
+
+            if len(page) < _PAGE_SIZE:
+                break
+
             from_idx += _PAGE_SIZE
 
-    def scrape_product(self, product_url: str) -> ProductData:
-        # Resolve the product slug to a VTEX product via the search API
-        slug = product_url.rstrip("/").split("/")[-1]
-        url = f"{self.base_url}{_VTEX_SEARCH_PATH}"
-        params = {"fq": f"alternateIds_RefId:{slug}", "_from": 0, "_to": 0}
-        resp = self._client.get(url, params=params)
-        resp.raise_for_status()
-        items = resp.json()
-        if not items:
-            raise ValueError(f"Product not found: {product_url}")
-        return self._parse_item(items[0])
+        return results
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    def _search(self, category_path: str, from_idx: int, to_idx: int) -> list[dict]:
-        url = f"{self.base_url}{_VTEX_SEARCH_PATH}"
-        # Strip leading slash for the fq filter
-        cat = re.sub(r"^/", "", category_path)
-        params = {
-            "fq": f"C:/{cat}/",
-            "_from": from_idx,
-            "_to": to_idx,
-            "O": "OrderByTopSaleDESC",
-        }
-        resp = self._client.get(url, params=params)
-        resp.raise_for_status()
+    def get_category_tree(self, depth: int = 3) -> list[dict]:
+        """Devuelve el árbol de categorías de la tienda (útil para descubrir IDs)."""
+        url = f"{self.base_url}{_TREE_PATH}/{depth}"
+        resp = self._get_with_retry(url)
         return resp.json()
 
-    def _parse_item(self, item: dict) -> ProductData:
-        sku_id = str(item.get("productId", ""))
-        name = item.get("productName", "")
-        link = item.get("link", "")
-        category = item.get("categories", [None])[0]
-        if category:
-            category = category.strip("/").split("/")[-1]
+    # ------------------------------------------------------------------
+    # Resolución de rutas semánticas → numéricas
+    # ------------------------------------------------------------------
 
-        # Pick the first available SKU for pricing
-        skus: list[dict] = item.get("items", [{}])
-        sku_data = skus[0] if skus else {}
-        sellers: list[dict] = sku_data.get("sellers", [{}])
-        offer = sellers[0].get("commertialOffer", {}) if sellers else {}
+    def _resolve_category_path(self, path: str) -> str:
+        """Convierte '/electronica/linea-blanca' al path numérico '/12/61'.
 
-        price = _parse_price(offer.get("Price")) or 0.0
-        list_price = _parse_price(offer.get("ListPrice"))
-        discount_pct: float | None = None
-        if list_price and list_price > price:
-            discount_pct = round((1 - price / list_price) * 100, 1)
+        Si el path ya contiene solo números y barras, lo devuelve tal cual.
+        """
+        segments = [s for s in path.strip("/").split("/") if s]
 
-        in_stock = int(offer.get("AvailableQuantity", 0)) > 0
+        if all(s.isdigit() for s in segments):
+            return "/" + "/".join(segments)
 
-        return ProductData(
-            sku=sku_id,
-            name=name,
-            url=self._full_url(link),
-            price=price,
-            original_price=list_price,
-            discount_pct=discount_pct,
-            in_stock=in_stock,
-            category=category,
+        # Necesitamos el árbol para resolver
+        tree = self.get_category_tree(depth=len(segments) + 1)
+        numeric_ids: list[str] = []
+        nodes = tree
+
+        for seg in segments:
+            node = self._find_node(nodes, seg)
+            if node is None:
+                log.warning(
+                    "Segmento '%s' no encontrado en el árbol de categorías de %s. "
+                    "Usando path semántico directo.",
+                    seg, self.base_url,
+                )
+                return "/" + "/".join(segments)
+            numeric_ids.append(str(node["id"]))
+            nodes = node.get("children", [])
+
+        return "/" + "/".join(numeric_ids)
+
+    @staticmethod
+    def _find_node(nodes: list[dict], segment: str) -> dict | None:
+        """Busca un nodo por nombre o por slug extraído de su URL."""
+        seg_lower = segment.lower().replace("-", " ")
+        for node in nodes:
+            name_lower = node.get("name", "").lower()
+            url_slug = node.get("url", "").rstrip("/").split("/")[-1].lower()
+            if name_lower == seg_lower or url_slug == segment.lower():
+                return node
+        # Búsqueda difusa: contiene el segmento
+        for node in nodes:
+            if seg_lower in node.get("name", "").lower():
+                return node
+        return None
+
+    # ------------------------------------------------------------------
+    # HTTP y parsing
+    # ------------------------------------------------------------------
+
+    def _fetch_page(self, numeric_path: str, from_idx: int, to_idx: int) -> list[dict]:
+        url = f"{self.base_url}{_SEARCH_PATH}"
+        params = {
+            "fq": f"C:{numeric_path}/",
+            "_from": from_idx,
+            "_to": to_idx,
+            "O": "OrderByReleaseDateDESC",
+        }
+        resp = self._get_with_retry(url, params=params)
+        return resp.json()
+
+    def _get_with_retry(self, url: str, params: dict | None = None) -> httpx.Response:
+        last_exc: Exception | None = None
+        for attempt in range(1, _MAX_RETRIES + 1):
+            try:
+                resp = self._client.get(url, params=params)
+                resp.raise_for_status()
+                return resp
+            except (httpx.HTTPError, httpx.TimeoutException) as exc:
+                last_exc = exc
+                log.warning(
+                    "Intento %d/%d fallido [%s]: %s",
+                    attempt, _MAX_RETRIES, url, exc,
+                )
+                if attempt < _MAX_RETRIES:
+                    time.sleep(_RETRY_BACKOFF)
+
+        raise RuntimeError(f"Todos los reintentos fallaron para {url}") from last_exc
+
+    def _parse_item(self, item: dict, category_path: str) -> dict:
+        sku = str(item["productId"])
+        name = item["productName"]
+        link_text = item.get("linkText", "")
+        url = f"{self.base_url}/{link_text}/p"
+
+        offer = (
+            item.get("items", [{}])[0]
+            .get("sellers", [{}])[0]
+            .get("commertialOffer", {})
         )
+        price = _parse_price(offer.get("Price")) or 0.0
+        original_price = _parse_price(offer.get("ListPrice"))
+        in_stock: bool = bool(offer.get("IsAvailable", False))
+
+        category = category_path.strip("/").split("/")[-1]
+
+        return {
+            "sku": sku,
+            "name": name,
+            "url": url,
+            "price": price,
+            "original_price": original_price,
+            "discount_pct": _discount_pct(price, original_price),
+            "in_stock": in_stock,
+            "category": category,
+        }
+
+
+# ------------------------------------------------------------------
+# Test: python -m scrapers.vtex
+# ------------------------------------------------------------------
+
+if __name__ == "__main__":
+    import json
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+    BASE_URL = "https://www.walmart.co.cr"
+    CATEGORY = "/electronica/linea-blanca"
+
+    scraper = VtexScraper(store_id=4, base_url=BASE_URL)
+    productos = scraper.scrape_category(CATEGORY)
+
+    print(f"\nTotal encontrados: {len(productos)}")
+    print("\n--- Primeros 5 resultados ---")
+    for p in productos[:5]:
+        print(json.dumps(p, ensure_ascii=False, indent=2))

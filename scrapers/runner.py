@@ -4,7 +4,7 @@ import logging
 from typing import Sequence
 
 from db.database import get_active_stores, init_db, insert_price, upsert_product
-from scrapers.base import BaseScraper, ProductData
+from scrapers.base import ProductData
 from scrapers.magento import MagentoScraper
 from scrapers.vtex import VtexScraper
 
@@ -15,7 +15,7 @@ logging.basicConfig(
 log = logging.getLogger("runner")
 
 # Map each store's scraper_type to its class
-_SCRAPER_MAP: dict[str, type[BaseScraper]] = {
+_SCRAPER_MAP = {
     "magento": MagentoScraper,
     "vtex": VtexScraper,
 }
@@ -27,15 +27,16 @@ _DEFAULT_CATEGORIES: dict[str, list[str]] = {
 }
 
 
-def _save_product(store_id: int, data: ProductData) -> None:
-    product_id = upsert_product(store_id, data.sku, data.name, data.url, data.category)
-    insert_price(
-        product_id,
-        price=data.price,
-        original_price=data.original_price,
-        discount_pct=data.discount_pct,
-        in_stock=data.in_stock,
-    )
+def _save_product(store_id: int, data: ProductData | dict) -> None:
+    if isinstance(data, dict):
+        sku, name, url, cat = data["sku"], data["name"], data["url"], data.get("category")
+        price, orig, disc, stock = data["price"], data.get("original_price"), data.get("discount_pct"), data["in_stock"]
+    else:
+        sku, name, url, cat = data.sku, data.name, data.url, data.category
+        price, orig, disc, stock = data.price, data.original_price, data.discount_pct, data.in_stock
+
+    product_id = upsert_product(store_id, sku, name, url, cat)
+    insert_price(product_id, price=price, original_price=orig, discount_pct=disc, in_stock=stock)
 
 
 def run_store(store_id: int, scraper_type: str, base_url: str, categories: Sequence[str]) -> None:
