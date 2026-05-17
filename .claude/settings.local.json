@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Path \"D:\\\\Personal\\\\precio-tracker-cr\\\\scrapers\" -Force)",
+      "PowerShell(New-Item -ItemType Directory -Path \"D:\\\\Personal\\\\precio-tracker-cr\\\\db\" -Force)"
+    ]
+  }
+}
