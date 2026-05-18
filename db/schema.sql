@@ -1,10 +1,13 @@
 CREATE TABLE IF NOT EXISTS stores (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    name        TEXT    NOT NULL,
+    name        TEXT    NOT NULL UNIQUE,
     base_url    TEXT    NOT NULL,
     scraper_type TEXT   NOT NULL CHECK (scraper_type IN ('magento', 'vtex')),
     active      INTEGER NOT NULL DEFAULT 1
 );
+
+-- Para BDs existentes que no tienen el constraint: idempotente
+CREATE UNIQUE INDEX IF NOT EXISTS idx_stores_name ON stores(name);
 
 CREATE TABLE IF NOT EXISTS products (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
