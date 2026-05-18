@@ -177,6 +177,13 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
 
 if __name__ == "__main__":
     import argparse
+    import sys
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        stream=sys.stdout,
+    )
 
     parser = argparse.ArgumentParser(description="Ejecuta scraping de precios")
     parser.add_argument(
