@@ -1,13 +1,29 @@
 CREATE TABLE IF NOT EXISTS stores (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    name        TEXT    NOT NULL UNIQUE,
-    base_url    TEXT    NOT NULL,
-    scraper_type TEXT   NOT NULL CHECK (scraper_type IN ('magento', 'vtex')),
-    active      INTEGER NOT NULL DEFAULT 1
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name         TEXT    NOT NULL UNIQUE,
+    base_url     TEXT    NOT NULL,
+    scraper_type TEXT    NOT NULL CHECK (scraper_type IN ('magento', 'vtex')),
+    active       INTEGER NOT NULL DEFAULT 1,
+    status       TEXT    NOT NULL DEFAULT 'active'
+                         CHECK (status IN ('active', 'requires_attention'))
 );
 
 -- Para BDs existentes que no tienen el constraint: idempotente
 CREATE UNIQUE INDEX IF NOT EXISTS idx_stores_name ON stores(name);
+
+CREATE TABLE IF NOT EXISTS scrape_runs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id     INTEGER NOT NULL REFERENCES stores(id),
+    started_at   TEXT    NOT NULL,
+    finished_at  TEXT    NOT NULL,
+    success      INTEGER NOT NULL DEFAULT 0,
+    new_products INTEGER NOT NULL DEFAULT 0,
+    prices_added INTEGER NOT NULL DEFAULT 0,
+    errors       INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_scrape_runs_store_id ON scrape_runs(store_id);
+CREATE INDEX IF NOT EXISTS idx_scrape_runs_started  ON scrape_runs(started_at);
 
 CREATE TABLE IF NOT EXISTS products (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,

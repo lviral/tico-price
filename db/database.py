@@ -35,7 +35,17 @@ def init_db() -> None:
     sql = SCHEMA_PATH.read_text(encoding="utf-8")
     conn = sqlite3.connect(DB_PATH)
     try:
-        conn.executescript(sql)  # executescript hace commit implícito
+        conn.executescript(sql)
+        # Migraciones para BDs existentes (ALTER TABLE no soporta IF NOT EXISTS)
+        for migration in [
+            "ALTER TABLE stores ADD COLUMN status TEXT NOT NULL DEFAULT 'active' "
+            "CHECK (status IN ('active', 'requires_attention'))",
+        ]:
+            try:
+                conn.execute(migration)
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass  # la columna ya existe
     finally:
         conn.close()
 
@@ -122,6 +132,59 @@ def save_product(store_id: int, data: dict) -> tuple[int, bool]:
 # ---------------------------------------------------------------------------
 # Lectura
 # ---------------------------------------------------------------------------
+
+def record_scrape_run(
+    store_id: int,
+    started_at: str,
+    finished_at: str,
+    success: bool,
+    new_products: int = 0,
+    prices_added: int = 0,
+    errors: int = 0,
+) -> None:
+    """Registra el resultado de un scrape de tienda en scrape_runs."""
+    with get_db() as conn:
+        conn.execute(
+            """INSERT INTO scrape_runs
+               (store_id, started_at, finished_at, success, new_products, prices_added, errors)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (store_id, started_at, finished_at, int(success),
+             new_products, prices_added, errors),
+        )
+
+
+def get_consecutive_failures(store_id: int, n: int = 3) -> int:
+    """Retorna cuántos de los últimos `n` runs terminaron en fallo (success=0)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT success FROM scrape_runs
+               WHERE store_id = ?
+               ORDER BY started_at DESC, id DESC
+               LIMIT ?""",
+            (store_id, n),
+        ).fetchall()
+    if len(rows) < n:
+        return 0
+    return sum(1 for r in rows if r["success"] == 0)
+
+
+def mark_store_attention(store_id: int) -> None:
+    """Marca una tienda como requires_attention."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE stores SET status = 'requires_attention' WHERE id = ?",
+            (store_id,),
+        )
+
+
+def reset_store_status(store_id: int) -> None:
+    """Restablece el status de una tienda a 'active' tras un scrape exitoso."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE stores SET status = 'active' WHERE id = ?",
+            (store_id,),
+        )
+
 
 def get_active_stores(scraper_type: str | None = None) -> list[sqlite3.Row]:
     sql = "SELECT * FROM stores WHERE active = 1"

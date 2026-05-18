@@ -3,30 +3,25 @@
 import logging
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from db.database import get_active_stores, init_db, save_product
 from scrapers.magento import MagentoScraper
 from scrapers.vtex import VtexScraper
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    stream=sys.stdout,
-)
 log = logging.getLogger("runner")
 
 # ---------------------------------------------------------------------------
 # Configuración de scrapers y categorías por tienda
 # ---------------------------------------------------------------------------
 
-_SCRAPER_MAP = {
+SCRAPER_MAP = {
     "magento": MagentoScraper,
     "vtex": VtexScraper,
 }
 
 # Categorías por nombre de tienda. Ajustar aquí cuando se agreguen tiendas.
-_STORE_CATEGORIES: dict[str, list[str]] = {
+STORE_CATEGORIES: dict[str, list[str]] = {
     "Gollo":      ["https://www.gollo.com/c/linea-blanca"],
     "Monge":      ["https://www.tiendamonge.com/hogar-y-linea-blanca"],
     "Verdugo":    ["https://www.verdugotienda.com/hogar-y-linea-blanca"],
@@ -72,13 +67,13 @@ def run_store(store_id: int, store_name: str, scraper_type: str, base_url: str) 
     result = StoreResult(store_name=store_name)
     t0 = time.monotonic()
 
-    scraper_cls = _SCRAPER_MAP.get(scraper_type)
+    scraper_cls = SCRAPER_MAP.get(scraper_type)
     if scraper_cls is None:
         log.error("Tipo de scraper desconocido '%s' para tienda '%s'", scraper_type, store_name)
         result.errors += 1
         return result
 
-    categories = _STORE_CATEGORIES.get(store_name, [])
+    categories = STORE_CATEGORIES.get(store_name, [])
     if not categories:
         log.warning("Sin categorías configuradas para '%s' — se omite", store_name)
         return result
@@ -120,7 +115,7 @@ def run_store(store_id: int, store_name: str, scraper_type: str, base_url: str) 
 # Punto de entrada
 # ---------------------------------------------------------------------------
 
-def run_all(store_names: list[str] | None = None) -> None:
+def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
     """Ejecuta el scrape de todas las tiendas activas (o del subconjunto indicado).
 
     Params
@@ -177,6 +172,7 @@ def run_all(store_names: list[str] | None = None) -> None:
             r.store_name, r.new_products, r.prices_recorded, status,
         )
     log.info("═" * 55)
+    return results
 
 
 if __name__ == "__main__":
