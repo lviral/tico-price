@@ -56,8 +56,11 @@ function debounce(fn, ms) {
 
 function timeAgo(iso) {
   if (!iso) return "nunca";
-  const diff = Math.floor((Date.now() - new Date(iso)) / 60000);
-  if (diff < 60) return `hace ${diff}m`;
+  // SQLite devuelve sin zona horaria — forzar UTC añadiendo "Z"
+  const utc  = iso.includes("T") || iso.endsWith("Z") ? iso : iso.replace(" ", "T") + "Z";
+  const diff = Math.floor((Date.now() - new Date(utc)) / 60000);
+  if (diff < 1)    return "recién";
+  if (diff < 60)   return `hace ${diff}m`;
   if (diff < 1440) return `hace ${Math.floor(diff / 60)}h`;
   return `hace ${Math.floor(diff / 1440)}d`;
 }
