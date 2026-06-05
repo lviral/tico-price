@@ -22,11 +22,32 @@ SCRAPER_MAP = {
 
 # Categorías por nombre de tienda. Ajustar aquí cuando se agreguen tiendas.
 STORE_CATEGORIES: dict[str, list[str]] = {
-    "Gollo":      ["https://www.gollo.com/c/linea-blanca"],
-    "Monge":      ["https://www.tiendamonge.com/hogar-y-linea-blanca"],
-    "Verdugo":    ["https://www.verdugotienda.com/hogar-y-linea-blanca"],
-    "Walmart CR": ["/electronica/linea-blanca"],
-    "Siman CR":   ["/linea-blanca"],
+    "Gollo": [
+        "https://www.gollo.com/c/linea-blanca",
+        "https://www.gollo.com/c/tv-y-video",
+        "https://www.gollo.com/c/telefonia",
+    ],
+    "Monge": [
+        "https://www.tiendamonge.com/hogar-y-linea-blanca",
+        "https://www.tiendamonge.com/celulares-y-tablets",
+    ],
+    "Verdugo": [
+        "https://www.verdugotienda.com/hogar-y-linea-blanca",
+        "https://www.verdugotienda.com/celulares-y-tablets",
+    ],
+    "Walmart CR": [
+        "/electronica/linea-blanca",
+        "/electronica/celulares",        # cat 108
+        "/electronica/televisores",      # cat 111
+        "/electronica/computacion",      # cat 109
+        "/electronica/electrodomesticos",# cat 56
+        "/electronica/audio",            # cat 107
+    ],
+    "Siman CR": [
+        "/linea-blanca",                 # cat 37
+        "/tecnologia",                   # cat 35: celulares, audio, computadoras
+        "/electrodomesticos",            # cat 1145
+    ],
 }
 
 
