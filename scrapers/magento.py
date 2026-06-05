@@ -72,7 +72,10 @@ class MagentoScraper:
         discount_pct, in_stock, category.
         """
         url = category_url if category_url.startswith("http") else f"{self.base_url}{category_url}"
-        category = url.rstrip("/").split("/")[-1].split("?")[0]
+        _slug = url.rstrip("/").split("/")[-1].split("?")[0]
+        # Quitar extensión .html si la tiene (ej: EPA usa /electrodomesticos.html)
+        import os as _os
+        category = _os.path.splitext(_slug)[0]
         results: list[dict] = []
 
         with sync_playwright() as pw:
