@@ -1,0 +1,22 @@
+TU_DOMINIO {
+    # HTTPS automático con Let's Encrypt
+    reverse_proxy localhost:8000
+
+    # Logs de acceso
+    log {
+        output file /var/log/caddy/precio-tracker-access.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+
+    # Seguridad básica
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    # Comprimir respuestas
+    encode gzip
+}

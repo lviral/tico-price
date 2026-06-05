@@ -1,0 +1,22 @@
+[Unit]
+Description=PrecioTracker CR — API FastAPI
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=preciotracker
+WorkingDirectory=/opt/precio-tracker
+Environment="SITE_URL=https://TU_DOMINIO"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/opt/precio-tracker/.venv/bin/python run.py --api --port 8000
+Restart=always
+RestartSec=5
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=precio-tracker-api
+
+[Install]
+WantedBy=multi-user.target

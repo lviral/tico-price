@@ -1,0 +1,18 @@
+[Unit]
+Description=PrecioTracker CR — Scrape diario de precios
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=preciotracker
+WorkingDirectory=/opt/precio-tracker
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/opt/precio-tracker/.venv/bin/python run.py --once
+
+# Timeout generoso: el scrape completo tarda ~15 min
+TimeoutStartSec=1800
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=precio-tracker-scraper
