@@ -20,6 +20,27 @@ SCRAPER_MAP = {
     "vtex": VtexScraper,
 }
 
+# Mapeo de slugs de categoría → nombre canónico en español.
+# Asegura que tiendas distintas que usan nombres diferentes queden unificadas.
+CATEGORY_NORMALIZE: dict[str, str] = {
+    # Línea blanca
+    "hogar-y-linea-blanca":       "linea-blanca",
+    # Celulares
+    "celulares-y-tablets":        "celulares",
+    "telefonia":                   "celulares",
+    "smartphones":                 "celulares",
+    # Televisores / audio-video
+    "tv-y-video":                  "televisores",
+    "audio-video":                 "televisores",
+    # Electrodomésticos
+    "pequenos-electrodomesticos":  "electrodomesticos",
+    "small-appliances":            "electrodomesticos",
+    # Electrónica general
+    "electronics":                 "electronica",
+    "tecnologia":                  "electronica",
+    "gaming":                      "electronica",
+}
+
 # Categorías por nombre de tienda. Ajustar aquí cuando se agreguen tiendas.
 STORE_CATEGORIES: dict[str, list[str]] = {
     "Gollo": [
@@ -52,6 +73,13 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://aliss.cr/electronics",
         "https://aliss.cr/pequenos-electrodomesticos",
     ],
+    "EPA CR": [
+        "https://cr.epaenlinea.com/electrodomesticos.html",
+        "https://cr.epaenlinea.com/herramientas-electricas.html",
+        "https://cr.epaenlinea.com/iluminacion.html",
+        "https://cr.epaenlinea.com/cocinas.html",
+        "https://cr.epaenlinea.com/seguridad.html",
+    ],
 }
 
 
@@ -77,6 +105,10 @@ class StoreResult:
 
 def _process_product(store_id: int, data: dict) -> bool:
     """Persiste un producto + precio. Retorna True si fue exitoso."""
+    # Normalizar categoría antes de guardar
+    data = dict(data)
+    cat = data.get("category") or ""
+    data["category"] = CATEGORY_NORMALIZE.get(cat, cat)
     try:
         save_product(store_id, data)
         return True
