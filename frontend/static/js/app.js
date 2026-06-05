@@ -280,6 +280,26 @@ function updateFavBadge() {
   badge.classList.toggle("hidden", count === 0);
 }
 
+// ── Sorting ────────────────────────────────────────────────────────────────
+
+function sortProducts(products, sortBy) {
+  const arr = [...products];
+  switch (sortBy) {
+    case "price-asc":
+      return arr.sort((a, b) => (a.price || 0) - (b.price || 0));
+    case "price-desc":
+      return arr.sort((a, b) => (b.price || 0) - (a.price || 0));
+    case "discount-desc":
+      return arr.sort((a, b) => (b.discount_pct || 0) - (a.discount_pct || 0));
+    case "change-desc":
+      return arr.sort((a, b) => (b.price_change_7d ?? -999) - (a.price_change_7d ?? -999));
+    case "change-asc":
+      return arr.sort((a, b) => (a.price_change_7d ?? 999) - (b.price_change_7d ?? 999));
+    default:
+      return arr;
+  }
+}
+
 function attachCardHandlers(container) {
   container.querySelectorAll(".product-card").forEach((card) => {
     // Abrir modal al hacer clic en la card (no en el corazón)
@@ -300,14 +320,19 @@ function attachCardHandlers(container) {
 }
 
 async function loadProducts(q, category, store) {
-  const grid = document.getElementById("products-grid");
+  const grid    = document.getElementById("products-grid");
+  const countEl = document.getElementById("results-count");
   grid.innerHTML = `<div class="spinner">Buscando…</div>`;
   try {
-    const results = await searchProducts(q, category, store);
+    const raw     = await searchProducts(q, category, store);
+    const sortBy  = document.getElementById("sort-by").value;
+    const results = sortProducts(raw, sortBy);
     if (!results.length) {
       grid.innerHTML = `<p class="empty">Sin resultados para "${esc(q)}".</p>`;
+      countEl.textContent = "";
       return;
     }
+    countEl.textContent = `${results.length} productos`;
     grid.innerHTML = results.map(productCard).join("");
     attachCardHandlers(grid);
   } catch (e) {
@@ -362,6 +387,7 @@ function initSearch() {
 
   input.addEventListener("input", run);
   selStore.addEventListener("change", run);
+  document.getElementById("sort-by").addEventListener("change", run);
 
   // Poblar filtro de tiendas
   getStores().then((stores) => {

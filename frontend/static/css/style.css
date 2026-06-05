@@ -150,6 +150,35 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
 .pill:hover  { border-color: var(--primary); color: var(--primary); }
 .pill-active { background: #dbeafe; border-color: var(--primary); color: var(--primary); }
 
+/* ── Results bar ──────────────────────────────────────── */
+.results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .85rem;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+
+.results-count {
+  font-size: .85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.sort-select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .4rem .75rem;
+  font-size: .85rem;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+.sort-select:focus { border-color: var(--primary); }
+
 /* ── Product grid ─────────────────────────────────────── */
 .products-grid {
   display: grid;

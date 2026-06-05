@@ -99,6 +99,16 @@
 
     <!-- Resultados de búsqueda -->
     <div id="search-results-section" class="hidden">
+      <div class="results-bar">
+        <span id="results-count" class="results-count"></span>
+        <select id="sort-by" class="sort-select">
+          <option value="price-asc">Precio: menor a mayor</option>
+          <option value="price-desc">Precio: mayor a menor</option>
+          <option value="discount-desc">Mayor descuento %</option>
+          <option value="change-desc">Más aumentaron</option>
+          <option value="change-asc">Más bajaron</option>
+        </select>
+      </div>
       <div id="products-grid" class="products-grid"></div>
     </div>
   </div>
