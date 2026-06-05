@@ -79,7 +79,7 @@ def run_store(store_id: int, store_name: str, scraper_type: str, base_url: str) 
         return result
 
     scraper = scraper_cls(store_id, base_url)
-    log.info("── %s (%s)  categorías=%d", store_name, scraper_type, len(categories))
+    log.info("-- %s (%s)  categorias=%d", store_name, scraper_type, len(categories))
 
     for cat_url in categories:
         log.info("  Scrapeando categoría: %s", cat_url)
@@ -104,7 +104,7 @@ def run_store(store_id: int, store_name: str, scraper_type: str, base_url: str) 
 
     result.elapsed_s = time.monotonic() - t0
     log.info(
-        "  ✓ %s  nuevos=%d  precios=%d  errores=%d  (%.0fs)",
+        "  OK %s  nuevos=%d  precios=%d  errores=%d  (%.0fs)",
         store_name, result.new_products, result.prices_recorded,
         result.errors, result.elapsed_s,
     )
@@ -132,9 +132,9 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
         log.warning("No hay tiendas activas que procesar")
         return
 
-    log.info("═" * 55)
+    log.info("=" * 55)
     log.info("Iniciando scrape: %d tienda(s)", len(stores))
-    log.info("═" * 55)
+    log.info("=" * 55)
 
     t_global = time.monotonic()
     results: list[StoreResult] = []
@@ -156,14 +156,14 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
     total_prices= sum(r.prices_recorded for r in results)
     total_errors= sum(r.errors          for r in results)
 
-    log.info("═" * 55)
+    log.info("=" * 55)
     log.info("RESUMEN")
     log.info("  Tiendas procesadas : %d", len(results))
     log.info("  Productos nuevos   : %d", total_new)
     log.info("  Precios registrados: %d", total_prices)
     log.info("  Errores            : %d", total_errors)
     log.info("  Tiempo total       : %.0fs", elapsed_total)
-    log.info("═" * 55)
+    log.info("=" * 55)
 
     for r in results:
         status = "OK" if r.ok() else f"⚠ {r.errors} errores"
@@ -171,7 +171,7 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
             "  %-14s  nuevos=%4d  precios=%4d  %s",
             r.store_name, r.new_products, r.prices_recorded, status,
         )
-    log.info("═" * 55)
+    log.info("=" * 55)
     return results
 
 

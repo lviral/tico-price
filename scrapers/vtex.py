@@ -79,7 +79,7 @@ class VtexScraper:
         discount_pct, in_stock, category.
         """
         numeric_path = self._resolve_category_path(category_path)
-        log.info("[%s] categoría=%s → path numérico=%s", self.base_url, category_path, numeric_path)
+        log.info("[%s] categoria=%s -> path numerico=%s", self.base_url, category_path, numeric_path)
 
         results: list[dict] = []
         from_idx = 0
@@ -103,7 +103,7 @@ class VtexScraper:
                     log.warning("Error parseando producto %s: %s", raw.get("productId"), exc)
 
             log.info(
-                "[%s] _from=%d _to=%d → %d productos (acum. %d)",
+                "[%s] _from=%d _to=%d -> %d productos (acum. %d)",
                 self.base_url, from_idx, to_idx, len(parsed), len(results) + len(parsed),
             )
 

@@ -659,7 +659,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initSearch();
   initInflationPeriodBtns();
   updateFavBadge();
-  loadInflation(30);
+  loadInflation(7);
 
   // Deep link: si la URL es /producto/{id}, abrir modal directo
   const deepLink = location.pathname.match(/^\/producto\/(\d+)$/);
