@@ -76,6 +76,12 @@ class MagentoScraper:
         # Quitar extensión .html si la tiene (ej: EPA usa /electrodomesticos.html)
         import os as _os
         category = _os.path.splitext(_slug)[0]
+        # Normalizar nombres en inglés a español
+        _NORMALIZE = {
+            "electronics": "electronica",
+            "gaming":       "tecnologia",
+        }
+        category = _NORMALIZE.get(category, category)
         results: list[dict] = []
 
         with sync_playwright() as pw:
