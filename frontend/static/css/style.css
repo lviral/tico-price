@@ -603,12 +603,15 @@ footer {
 @media (max-width: 768px) {
   /* Header */
   header {
-    padding: .75rem 1rem;
+    padding: .65rem 1rem;
     flex-wrap: wrap;
     min-height: auto;
-    gap: .6rem;
+    gap: .5rem;
   }
   .header-brand { flex: 1; }
+  .logo-icon { width: 28px; height: 28px; }
+  .logo-wrap { gap: .45rem; }
+  .logo { font-size: 1.05rem; }
   .tagline { display: none; }
   nav {
     width: 100%;
@@ -617,7 +620,7 @@ footer {
     -webkit-overflow-scrolling: touch;
   }
   nav::-webkit-scrollbar { display: none; }
-  nav button { font-size: .8rem; padding: .35rem .65rem; white-space: nowrap; }
+  nav button { font-size: .78rem; padding: .35rem .6rem; white-space: nowrap; }
 
   /* Layout */
   main { padding: 1rem; }
@@ -642,6 +645,19 @@ footer {
   .inf-val { font-size: 1.1rem; }
   .inf-label { font-size: .72rem; }
   .inflation-chart-wrap { height: 100px; }
+
+  /* Touch targets más grandes en mobile */
+  .fav-btn {
+    width: 36px;
+    height: 36px;
+    top: .4rem;
+    right: .4rem;
+  }
+  .pill { padding: .35rem 1rem; font-size: .8rem; }
+
+  /* Botón compartir: solo icono en mobile */
+  #share-label { display: none; }
+  .modal-share { padding: .3rem .4rem; }
 
   /* Deals table */
   table { font-size: .78rem; }
