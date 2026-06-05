@@ -56,4 +56,5 @@ INSERT OR IGNORE INTO stores (name, base_url, scraper_type) VALUES
     ('Monge',      'https://www.tiendamonge.com',    'magento'),
     ('Verdugo',    'https://www.verdugotienda.com',  'magento'),
     ('Walmart CR', 'https://www.walmart.co.cr',      'vtex'),
-    ('Siman CR',   'https://cr.siman.com',            'vtex');
+    ('Siman CR',   'https://cr.siman.com',           'vtex'),
+    ('Aliss CR',   'https://aliss.cr',               'magento');

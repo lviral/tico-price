@@ -48,6 +48,10 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "/tecnologia",                   # cat 35: celulares, audio, computadoras
         "/electrodomesticos",            # cat 1145
     ],
+    "Aliss CR": [
+        "https://aliss.cr/electronics",
+        "https://aliss.cr/pequenos-electrodomesticos",
+    ],
 }
 
 
