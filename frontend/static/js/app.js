@@ -2,8 +2,8 @@ import { searchProducts, getHistory, getDeals, getStores, getTrending, getCatego
 import { isFavorite, toggleFavorite, getFavorites, getFavoriteCount } from "./favorites.js";
 
 // ── SEO defaults ───────────────────────────────────────────────────────────
-const DEFAULT_TITLE = "Precio Tracker CR — Historial de precios en Costa Rica";
-const DEFAULT_DESC  = "Seguí los precios de electrodomésticos y tecnología en tiendas de Costa Rica. Detectá ofertas reales y monitoreá la inflación.";
+const DEFAULT_TITLE = "TicoPrice — Historial de precios en Costa Rica";
+const DEFAULT_DESC  = "Monitoreamos los precios de electrodomésticos, celulares y tecnología en 7 tiendas de Costa Rica. Detectá ofertas reales.";
 
 function setMeta(title, description, url = location.href) {
   document.title = title;
@@ -87,8 +87,8 @@ function openModal(product) {
   }
 
   // Meta tags dinámicos
-  const desc = `Precio actual: ${colones(product.price)} en ${product.store}. Seguí el historial de precios de ${product.name} en Precio Tracker CR.`;
-  setMeta(`${product.name} — Precio Tracker CR`, desc);
+  const desc = `Precio actual: ${colones(product.price)} en ${product.store}. Seguí el historial de precios de ${product.name} en TicoPrice.`;
+  setMeta(`${product.name} — TicoPrice`, desc);
   injectJsonLd(product, product.price);
 
   getHistory(product.product_id)
@@ -115,7 +115,7 @@ async function openModalById(productId) {
     renderHistory(h, body);
 
     const desc = `Precio actual: ${colones(h.current_price)} en ${h.store}. Seguí el historial de precios de ${h.name}.`;
-    setMeta(`${h.name} — Precio Tracker CR`, desc);
+    setMeta(`${h.name} — TicoPrice`, desc);
     injectJsonLd({ name: h.name, in_stock: true }, h.current_price);
   } catch (e) {
     title.textContent = "Producto no encontrado";

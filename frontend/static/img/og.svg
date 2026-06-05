@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+
+  <!-- Fondo oscuro -->
+  <rect width="1200" height="630" fill="#0f172a"/>
+
+  <!-- Degradado lateral -->
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:0"/>
+    </linearGradient>
+    <linearGradient id="card-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg-grad)"/>
+
+  <!-- Líneas de cuadrícula decorativas -->
+  <line x1="0" y1="210" x2="1200" y2="210" stroke="#1e293b" stroke-width="1"/>
+  <line x1="0" y1="420" x2="1200" y2="420" stroke="#1e293b" stroke-width="1"/>
+  <line x1="300" y1="0" x2="300" y2="630" stroke="#1e293b" stroke-width="1"/>
+  <line x1="600" y1="0" x2="600" y2="630" stroke="#1e293b" stroke-width="1"/>
+  <line x1="900" y1="0" x2="900" y2="630" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- ── Logo icon grande (izquierda) ── -->
+  <rect x="80" y="185" width="120" height="120" rx="24" fill="#2563eb"/>
+  <!-- Ejes -->
+  <line x1="100" y1="290" x2="180" y2="290" stroke="white" stroke-width="3" opacity="0.35" stroke-linecap="round"/>
+  <line x1="100" y1="200" x2="100" y2="290" stroke="white" stroke-width="3" opacity="0.35" stroke-linecap="round"/>
+  <!-- Línea de tendencia -->
+  <polyline points="100,278 118,262 136,268 156,246 180,228"
+    fill="none" stroke="white" stroke-width="6"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Punto amarillo -->
+  <circle cx="180" cy="228" r="8" fill="#fbbf24"/>
+
+  <!-- ── Nombre TicoPrice ── -->
+  <text x="228" y="262" font-size="88" font-weight="800" fill="white" letter-spacing="-2">
+    Tico<tspan fill="#60a5fa">Price</tspan>
+  </text>
+
+  <!-- ── Tagline ── -->
+  <text x="82" y="360" font-size="32" fill="#94a3b8" letter-spacing="0.5">
+    Monitoreamos los precios en Costa Rica · 7 tiendas
+  </text>
+
+  <!-- ── Separador ── -->
+  <line x1="82" y1="390" x2="680" y2="390" stroke="#1e3a8a" stroke-width="2"/>
+
+  <!-- ── Métricas ── -->
+  <text x="82"  y="440" font-size="48" font-weight="700" fill="white">+4.320</text>
+  <text x="82"  y="475" font-size="22" fill="#64748b">productos</text>
+
+  <text x="300" y="440" font-size="48" font-weight="700" fill="white">2×</text>
+  <text x="300" y="475" font-size="22" fill="#64748b">actualización diaria</text>
+
+  <text x="460" y="440" font-size="48" font-weight="700" fill="#34d399">-1.06%</text>
+  <text x="460" y="475" font-size="22" fill="#64748b">variación esta semana</text>
+
+  <!-- ── Tarjetas de producto decorativas (derecha) ── -->
+  <!-- Card 1 -->
+  <rect x="740" y="80" width="380" height="200" rx="16" fill="url(#card-grad)" stroke="#1e3a8a" stroke-width="1"/>
+  <rect x="760" y="100" width="80" height="80" rx="10" fill="#1e3a8a"/>
+  <rect x="870" y="108" width="220" height="16" rx="4" fill="#1e293b"/>
+  <rect x="870" y="134" width="160" height="16" rx="4" fill="#1e293b"/>
+  <text x="762" y="210" font-size="28" font-weight="700" fill="white">₡450.000</text>
+  <rect x="870" y="196" width="80" height="24" rx="6" fill="#fee2e2"/>
+  <text x="880" y="214" font-size="16" font-weight="700" fill="#991b1b">↑ +3.2%</text>
+
+  <!-- Card 2 -->
+  <rect x="760" y="310" width="380" height="200" rx="16" fill="url(#card-grad)" stroke="#1e3a8a" stroke-width="1"/>
+  <rect x="780" y="330" width="80" height="80" rx="10" fill="#1e293b"/>
+  <rect x="890" y="338" width="220" height="16" rx="4" fill="#1e293b"/>
+  <rect x="890" y="364" width="160" height="16" rx="4" fill="#1e293b"/>
+  <text x="782" y="440" font-size="28" font-weight="700" fill="white">₡185.000</text>
+  <rect x="890" y="426" width="80" height="24" rx="6" fill="#dcfce7"/>
+  <text x="900" y="444" font-size="16" font-weight="700" fill="#15803d">↓ -5.1%</text>
+
+  <!-- Card 3 parcial -->
+  <rect x="800" y="540" width="380" height="130" rx="16" fill="url(#card-grad)" stroke="#1e3a8a" stroke-width="1" opacity="0.5"/>
+
+  <!-- ── URL ── -->
+  <text x="82" y="580" font-size="26" fill="#334155">ticoprice.cr</text>
+
+</svg>

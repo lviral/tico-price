@@ -35,8 +35,8 @@ from db.database import (
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="Precio Tracker CR",
-    description="Historial de precios de electrodomésticos en tiendas de Costa Rica.",
+    title="TicoPrice API",
+    description="Historial de precios de electrodomésticos, celulares y tecnología en Costa Rica.",
     version="1.0.0",
 )
 

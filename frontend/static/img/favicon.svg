@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Fondo redondeado azul -->
+  <rect width="32" height="32" rx="7" fill="#2563eb"/>
+  <!-- Ejes del gráfico -->
+  <line x1="5" y1="27" x2="27" y2="27" stroke="white" stroke-width="1.5" opacity="0.35" stroke-linecap="round"/>
+  <line x1="5" y1="5"  x2="5"  y2="27" stroke="white" stroke-width="1.5" opacity="0.35" stroke-linecap="round"/>
+  <!-- Línea de tendencia de precios -->
+  <polyline
+    points="5,23 10,18 15,20 21,12 27,7"
+    fill="none"
+    stroke="white"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+  <!-- Punto actual (amarillo) -->
+  <circle cx="27" cy="7" r="2.8" fill="#fbbf24"/>
+</svg>
