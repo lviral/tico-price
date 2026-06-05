@@ -4,3 +4,4 @@ beautifulsoup4
 schedule
 fastapi
 uvicorn
+aiofiles

@@ -40,6 +40,7 @@ def init_db() -> None:
         for migration in [
             "ALTER TABLE stores ADD COLUMN status TEXT NOT NULL DEFAULT 'active' "
             "CHECK (status IN ('active', 'requires_attention'))",
+            "ALTER TABLE products ADD COLUMN image_url TEXT",
         ]:
             try:
                 conn.execute(migration)
@@ -61,6 +62,7 @@ def upsert_product(
     name: str,
     url: str,
     category: str | None = None,
+    image_url: str | None = None,
 ) -> tuple[int, bool]:
     """Inserta o actualiza un producto.
 
@@ -75,14 +77,14 @@ def upsert_product(
 
     if existing:
         conn.execute(
-            "UPDATE products SET name = ?, url = ?, category = ? WHERE id = ?",
-            (name, url, category, existing["id"]),
+            "UPDATE products SET name = ?, url = ?, category = ?, image_url = ? WHERE id = ?",
+            (name, url, category, image_url, existing["id"]),
         )
         return existing["id"], False
 
     cursor = conn.execute(
-        "INSERT INTO products (store_id, sku, name, url, category) VALUES (?, ?, ?, ?, ?)",
-        (store_id, sku, name, url, category),
+        "INSERT INTO products (store_id, sku, name, url, category, image_url) VALUES (?, ?, ?, ?, ?, ?)",
+        (store_id, sku, name, url, category, image_url),
     )
     return cursor.lastrowid, True
 
@@ -117,6 +119,7 @@ def save_product(store_id: int, data: dict) -> tuple[int, bool]:
             data["name"],
             data["url"],
             data.get("category"),
+            data.get("image_url"),
         )
         insert_price(
             conn,
@@ -214,12 +217,14 @@ def search_products(
     query: str,
     category: str | None = None,
     store: str | None = None,
+    limit: int = 200,
 ) -> list[sqlite3.Row]:
     """Busca productos con filtros opcionales.
 
     Columnas retornadas:
-      product_id, sku, product_name, url, category,
-      store_name, price, original_price, discount_pct, in_stock, scraped_at
+      product_id, sku, product_name, url, category, image_url,
+      store_name, price, original_price, discount_pct, in_stock, scraped_at,
+      price_7d_ago, price_30d_ago
     """
     conditions = ["p.name LIKE ?"]
     params: list = [f"%{query}%"]
@@ -239,12 +244,15 @@ def search_products(
             p.name        AS product_name,
             p.url,
             p.category,
+            p.image_url,
             s.name        AS store_name,
             ph.price,
             ph.original_price,
             ph.discount_pct,
             ph.in_stock,
-            ph.scraped_at
+            ph.scraped_at,
+            ph7.price     AS price_7d_ago,
+            ph30.price    AS price_30d_ago
         FROM products p
         JOIN stores s ON s.id = p.store_id
         LEFT JOIN price_history ph ON ph.id = (
@@ -253,11 +261,96 @@ def search_products(
             ORDER BY scraped_at DESC, id DESC
             LIMIT 1
         )
+        LEFT JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                WHERE scraped_at <= datetime('now', '-7 days')
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) ph7 ON ph7.product_id = p.id
+        LEFT JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                WHERE scraped_at <= datetime('now', '-30 days')
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) ph30 ON ph30.product_id = p.id
         WHERE {where}
-        ORDER BY ph.price ASC
+        ORDER BY
+            CASE WHEN ph.price IS NULL OR ph.price = 0 THEN 1 ELSE 0 END,
+            ph.price ASC
+        LIMIT ?
     """
+    params.append(limit)
     with get_db() as conn:
         return conn.execute(sql, params).fetchall()
+
+
+def get_top_increases(days: int = 7, limit: int = 50) -> list[sqlite3.Row]:
+    """Productos que más aumentaron de precio en los últimos `days` días.
+
+    Solo incluye productos con precio anterior y actual ambos > 0.
+
+    Columnas retornadas:
+      product_id, sku, product_name, url, category, image_url, store_name,
+      price, original_price, discount_pct, in_stock, scraped_at,
+      price_before, change_pct
+    """
+    sql = """
+        SELECT
+            p.id          AS product_id,
+            p.sku,
+            p.name        AS product_name,
+            p.url,
+            p.category,
+            p.image_url,
+            s.name        AS store_name,
+            latest.price          AS price,
+            latest.original_price,
+            latest.discount_pct,
+            latest.in_stock,
+            latest.scraped_at,
+            old_ph.price          AS price_before,
+            ROUND(
+                (latest.price - old_ph.price) * 100.0 / old_ph.price,
+                1
+            )                     AS change_pct
+        FROM products p
+        JOIN stores s ON s.id = p.store_id
+        JOIN (
+            SELECT ph1.product_id, ph1.price, ph1.original_price,
+                   ph1.discount_pct, ph1.in_stock, ph1.scraped_at
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) latest ON latest.product_id = p.id
+        JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                WHERE scraped_at <= datetime('now', ? || ' days')
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) old_ph ON old_ph.product_id = p.id
+        WHERE latest.price > 0
+          AND old_ph.price > 0
+          AND latest.price > old_ph.price
+        ORDER BY change_pct DESC
+        LIMIT ?
+    """
+    with get_db() as conn:
+        return conn.execute(sql, (f"-{days}", limit)).fetchall()
 
 
 def get_product_with_stats(product_id: int, days: int = 90) -> sqlite3.Row | None:
@@ -370,6 +463,132 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
     """
     with get_db() as conn:
         return conn.execute(sql, (limit,)).fetchall()
+
+
+def get_inflation_index(days: int = 30) -> dict:
+    """Calcula la variación promedio de precios en los últimos `days` días.
+
+    Compara el precio actual de cada producto con el último precio registrado
+    hace al menos `days` días. Solo incluye productos con datos en ambos extremos.
+
+    Retorna un dict con:
+      overall_change_pct : float | None  — variación promedio general
+      product_count      : int           — productos con datos comparables
+      by_category        : list[dict]    — [{category, avg_change_pct, product_count}]
+      weekly_trend       : list[dict]    — [{week, avg_price, product_count}] últimas 12 sem.
+    """
+    # ── Variación general y por categoría ──────────────────────────────────
+    cat_sql = """
+        SELECT
+            p.category,
+            ROUND(AVG((latest.price - old_ph.price) * 100.0 / old_ph.price), 2)
+                AS avg_change_pct,
+            COUNT(*) AS product_count
+        FROM products p
+        JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) latest ON latest.product_id = p.id
+        JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                WHERE scraped_at <= datetime('now', ? || ' days')
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) old_ph ON old_ph.product_id = p.id
+        WHERE latest.price > 0 AND old_ph.price > 0
+        GROUP BY p.category
+        ORDER BY avg_change_pct DESC
+    """
+
+    overall_sql = """
+        SELECT
+            ROUND(AVG((latest.price - old_ph.price) * 100.0 / old_ph.price), 2)
+                AS avg_change_pct,
+            COUNT(*) AS product_count
+        FROM products p
+        JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) latest ON latest.product_id = p.id
+        JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                WHERE scraped_at <= datetime('now', ? || ' days')
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) old_ph ON old_ph.product_id = p.id
+        WHERE latest.price > 0 AND old_ph.price > 0
+    """
+
+    # ── Tendencia semanal (últimas 12 semanas) ──────────────────────────────
+    trend_sql = """
+        SELECT
+            strftime('%Y-W%W', scraped_at)  AS week,
+            ROUND(AVG(price), 2)            AS avg_price,
+            COUNT(DISTINCT product_id)      AS product_count
+        FROM price_history
+        WHERE scraped_at >= datetime('now', '-84 days')
+          AND price > 0
+        GROUP BY week
+        ORDER BY week
+    """
+
+    param = (f"-{days}",)
+    with get_db() as conn:
+        overall_row  = conn.execute(overall_sql, param).fetchone()
+        cat_rows     = conn.execute(cat_sql, param).fetchall()
+        trend_rows   = conn.execute(trend_sql).fetchall()
+
+    return {
+        "overall_change_pct": overall_row["avg_change_pct"] if overall_row else None,
+        "product_count":      overall_row["product_count"]  if overall_row else 0,
+        "by_category": [
+            {
+                "category":       r["category"],
+                "avg_change_pct": r["avg_change_pct"],
+                "product_count":  r["product_count"],
+            }
+            for r in cat_rows
+        ],
+        "weekly_trend": [
+            {
+                "week":          r["week"],
+                "avg_price":     r["avg_price"],
+                "product_count": r["product_count"],
+            }
+            for r in trend_rows
+        ],
+    }
+
+
+def get_categories() -> list[str]:
+    """Lista de categorías únicas con al menos un producto."""
+    sql = """
+        SELECT DISTINCT category
+        FROM products
+        WHERE category IS NOT NULL AND TRIM(category) != ''
+        ORDER BY category
+    """
+    with get_db() as conn:
+        rows = conn.execute(sql).fetchall()
+    return [r["category"] for r in rows]
 
 
 def get_stores_summary() -> list[sqlite3.Row]:

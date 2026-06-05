@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS products (
     name        TEXT    NOT NULL,
     url         TEXT    NOT NULL,
     category    TEXT,
+    image_url   TEXT,
     created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
     UNIQUE (store_id, sku)
 );

@@ -6,17 +6,27 @@ Iniciar:
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, PlainTextResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+SITE_URL = os.getenv("SITE_URL", "http://localhost:8000").rstrip("/")
+
 from db.database import (
+    get_categories,
     get_deals,
+    get_inflation_index,
     get_price_history,
     get_product_with_stats,
     get_stores_summary,
+    get_top_increases,
     search_products,
 )
 
@@ -37,10 +47,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def serve_frontend() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "index.html")
+
 
 # ---------------------------------------------------------------------------
 # Modelos de respuesta
 # ---------------------------------------------------------------------------
+
+def _pct_change(current: float | None, old: float | None) -> float | None:
+    """Variación porcentual entre dos precios. None si no hay datos suficientes."""
+    if current is None or old is None or old == 0:
+        return None
+    return round((current - old) * 100.0 / old, 1)
+
 
 class ProductSummary(BaseModel):
     product_id: int
@@ -48,12 +72,19 @@ class ProductSummary(BaseModel):
     name: str
     url: str
     category: str | None
+    image_url: str | None = None
     store: str
     price: float | None
     original_price: float | None
     discount_pct: float | None
     in_stock: bool | None
     last_seen: str | None
+    price_change_7d: float | None = Field(
+        None, description="Variación % del precio vs hace 7 días. Positivo = aumentó."
+    )
+    price_change_30d: float | None = Field(
+        None, description="Variación % del precio vs hace 30 días. Positivo = aumentó."
+    )
 
 
 class PricePoint(BaseModel):
@@ -99,6 +130,28 @@ class DealItem(BaseModel):
     sample_count: int
 
 
+class CategoryInflation(BaseModel):
+    category: str | None
+    avg_change_pct: float
+    product_count: int
+
+
+class WeeklyPoint(BaseModel):
+    week: str = Field(description="Semana en formato YYYY-Www")
+    avg_price: float
+    product_count: int
+
+
+class InflationIndex(BaseModel):
+    days: int = Field(description="Ventana de comparación en días")
+    overall_change_pct: float | None = Field(
+        description="Variación % promedio de todos los productos"
+    )
+    product_count: int = Field(description="Productos con datos comparables")
+    by_category: list[CategoryInflation]
+    weekly_trend: list[WeeklyPoint]
+
+
 class StoreSummary(BaseModel):
     id: int
     name: str
@@ -136,12 +189,15 @@ def list_products(
             name=r["product_name"],
             url=r["url"],
             category=r["category"],
+            image_url=r["image_url"],
             store=r["store_name"],
             price=r["price"],
             original_price=r["original_price"],
             discount_pct=r["discount_pct"],
             in_stock=bool(r["in_stock"]) if r["in_stock"] is not None else None,
             last_seen=r["scraped_at"],
+            price_change_7d=_pct_change(r["price"], r["price_7d_ago"]),
+            price_change_30d=_pct_change(r["price"], r["price_30d_ago"]),
         )
         for r in rows
     ]
@@ -236,6 +292,89 @@ def deals(
 
 
 @app.get(
+    "/trending",
+    response_model=list[ProductSummary],
+    summary="Productos que más aumentaron",
+    description=(
+        "Lista los productos con mayor incremento porcentual de precio "
+        "en los últimos `days` días. Solo incluye productos con historial "
+        "en ambos extremos del período."
+    ),
+)
+def trending(
+    days: Annotated[int, Query(ge=1, le=90, description="Ventana de días a comparar")] = 7,
+    limit: Annotated[int, Query(ge=1, le=200, description="Máximo de resultados")] = 50,
+) -> list[ProductSummary]:
+    rows = get_top_increases(days=days, limit=limit)
+    return [
+        ProductSummary(
+            product_id=r["product_id"],
+            sku=r["sku"],
+            name=r["product_name"],
+            url=r["url"],
+            category=r["category"],
+            image_url=r["image_url"],
+            store=r["store_name"],
+            price=r["price"],
+            original_price=r["original_price"],
+            discount_pct=r["discount_pct"],
+            in_stock=bool(r["in_stock"]) if r["in_stock"] is not None else None,
+            last_seen=r["scraped_at"],
+            price_change_7d=_pct_change(r["price"], r["price_before"]) if days == 7 else None,
+            price_change_30d=_pct_change(r["price"], r["price_before"]) if days == 30 else None,
+        )
+        for r in rows
+    ]
+
+
+@app.get(
+    "/categories",
+    response_model=list[str],
+    summary="Listar categorías",
+    description="Retorna todas las categorías únicas con al menos un producto registrado.",
+)
+def categories_list() -> list[str]:
+    return get_categories()
+
+
+@app.get(
+    "/inflation",
+    response_model=InflationIndex,
+    summary="Índice de inflación",
+    description=(
+        "Calcula la variación promedio de precios comparando el precio actual de cada "
+        "producto con su último precio registrado hace al menos `days` días. "
+        "Incluye desglose por categoría y tendencia semanal de las últimas 12 semanas."
+    ),
+)
+def inflation(
+    days: Annotated[int, Query(ge=7, le=365, description="Ventana de comparación en días")] = 30,
+) -> InflationIndex:
+    data = get_inflation_index(days=days)
+    return InflationIndex(
+        days=days,
+        overall_change_pct=data["overall_change_pct"],
+        product_count=data["product_count"],
+        by_category=[
+            CategoryInflation(
+                category=c["category"],
+                avg_change_pct=c["avg_change_pct"],
+                product_count=c["product_count"],
+            )
+            for c in data["by_category"]
+        ],
+        weekly_trend=[
+            WeeklyPoint(
+                week=w["week"],
+                avg_price=w["avg_price"],
+                product_count=w["product_count"],
+            )
+            for w in data["weekly_trend"]
+        ],
+    )
+
+
+@app.get(
     "/stores",
     response_model=list[StoreSummary],
     summary="Listar tiendas",
@@ -258,3 +397,59 @@ def stores() -> list[StoreSummary]:
         )
         for r in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# SEO — robots.txt, sitemap.xml, SPA fallback
+# ---------------------------------------------------------------------------
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots_txt() -> PlainTextResponse:
+    return PlainTextResponse(
+        f"User-agent: *\n"
+        f"Allow: /\n"
+        f"Sitemap: {SITE_URL}/sitemap.xml\n"
+    )
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap_xml() -> Response:
+    from db.database import get_db
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT p.id, ph.scraped_at
+               FROM products p
+               LEFT JOIN price_history ph ON ph.id = (
+                   SELECT id FROM price_history WHERE product_id = p.id
+                   ORDER BY scraped_at DESC LIMIT 1
+               )
+               ORDER BY p.id"""
+        ).fetchall()
+
+    urls = [f"  <url><loc>{SITE_URL}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>"]
+    for r in rows:
+        lastmod = (r["scraped_at"] or "")[:10]
+        lastmod_tag = f"<lastmod>{lastmod}</lastmod>" if lastmod else ""
+        urls.append(
+            f"  <url>"
+            f"<loc>{SITE_URL}/producto/{r['id']}</loc>"
+            f"{lastmod_tag}"
+            f"<changefreq>daily</changefreq>"
+            f"<priority>0.8</priority>"
+            f"</url>"
+        )
+
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "\n".join(urls)
+        + "\n</urlset>"
+    )
+    return Response(content=xml, media_type="application/xml")
+
+
+# IMPORTANTE: este catch-all debe ir al final para no interferir con las rutas de la API.
+@app.get("/{full_path:path}", include_in_schema=False)
+def spa_fallback(full_path: str) -> FileResponse:
+    """Sirve index.html para cualquier ruta no-API (SPA con History API routing)."""
+    return FileResponse(FRONTEND_DIR / "index.html")

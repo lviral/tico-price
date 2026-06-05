@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Precio Tracker CR — Historial de precios en Costa Rica</title>
+
+  <!-- SEO básico -->
+  <meta name="description"
+    content="Seguí los precios de electrodomésticos y tecnología en tiendas de Costa Rica. Detectá ofertas reales, compará historial de precios y monitoreá la inflación.">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph (Facebook, WhatsApp, LinkedIn…) -->
+  <meta property="og:type"        content="website">
+  <meta property="og:site_name"   content="Precio Tracker CR">
+  <meta property="og:title"       content="Precio Tracker CR — Historial de precios en Costa Rica">
+  <meta property="og:description" content="Seguí los precios de electrodomésticos y tecnología en tiendas de Costa Rica.">
+  <meta property="og:locale"      content="es_CR">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card"        content="summary">
+  <meta name="twitter:title"       content="Precio Tracker CR">
+  <meta name="twitter:description" content="Historial de precios de electrodomésticos en Costa Rica.">
+
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">PrecioTracker <span>CR</span></div>
+  <nav>
+    <button class="active" data-view="view-products">Productos</button>
+    <button data-view="view-deals">Ofertas</button>
+    <button data-view="view-stores">Tiendas</button>
+    <button data-view="view-favorites" class="nav-fav-btn">
+      ♥ Favoritos<span id="fav-badge" class="nav-badge hidden"></span>
+    </button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ── Productos ─────────────────────────────────── -->
+  <div id="view-products" class="view active">
+    <div class="search-bar">
+      <input id="search-input" type="search" placeholder="Buscar producto…" autofocus>
+      <select id="filter-store">
+        <option value="">Todas las tiendas</option>
+      </select>
+    </div>
+    <div id="category-pills" class="category-pills">
+      <button class="pill pill-active" data-cat="">Todas</button>
+    </div>
+
+    <!-- Banner de inflación -->
+    <div id="inflation-banner" class="inflation-banner hidden">
+      <div class="inflation-header">
+        <span class="inflation-title">📊 Variación de precios</span>
+        <div class="inflation-period-btns">
+          <button class="period-btn period-active" data-days="30">30 días</button>
+          <button class="period-btn" data-days="7">7 días</button>
+          <button class="period-btn" data-days="90">90 días</button>
+        </div>
+      </div>
+      <div id="inflation-cards" class="inflation-cards"></div>
+      <div class="inflation-chart-wrap">
+        <canvas id="inflation-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Vista por defecto: trending -->
+    <div id="trending-section">
+      <h2 class="section-heading">
+        <span class="heading-icon">📈</span> Más aumentaron esta semana
+      </h2>
+      <div id="trending-grid" class="products-grid"></div>
+    </div>
+
+    <!-- Resultados de búsqueda (ocultos hasta que el usuario escriba) -->
+    <div id="search-results-section" class="hidden">
+      <div id="products-grid" class="products-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── Ofertas ───────────────────────────────────── -->
+  <div id="view-deals" class="view">
+    <p class="section-title">
+      Productos donde el descuento anunciado supera la bajada real del precio histórico
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Precio actual</th>
+            <th>Precio original</th>
+            <th>Desc. anunciado</th>
+            <th>Desc. real</th>
+            <th title="Diferencia entre descuento anunciado y real. Mayor = más engañoso.">
+              Diferencia ↑
+            </th>
+            <th title="Cantidad de registros históricos">Registros</th>
+          </tr>
+        </thead>
+        <tbody id="deals-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Tiendas ───────────────────────────────────── -->
+  <div id="view-stores" class="view">
+    <div id="stores-grid" class="stores-grid"></div>
+  </div>
+
+  <!-- ── Favoritos ────────────────────────────────── -->
+  <div id="view-favorites" class="view">
+    <h2 class="section-heading">
+      <span class="heading-icon">♥</span> Mis favoritos
+    </h2>
+    <div id="favorites-grid" class="products-grid"></div>
+  </div>
+
+</main>
+
+<!-- ── Modal historial ───────────────────────────────── -->
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2 id="modal-title"></h2>
+        <small id="modal-store"></small>
+      </div>
+      <div class="modal-actions">
+        <button id="modal-share" class="modal-share" aria-label="Copiar enlace" title="Copiar enlace">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          <span id="share-label">Compartir</span>
+        </button>
+        <button id="modal-close" class="modal-close" aria-label="Cerrar">&times;</button>
+      </div>
+    </div>
+    <div id="modal-body" class="modal-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

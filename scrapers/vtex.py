@@ -209,8 +209,11 @@ class VtexScraper:
         link_text = item.get("linkText", "")
         url = f"{self.base_url}/{link_text}/p"
 
+        items_list = item.get("items", [{}])
+        first_item = items_list[0] if items_list else {}
+
         offer = (
-            item.get("items", [{}])[0]
+            first_item
             .get("sellers", [{}])[0]
             .get("commertialOffer", {})
         )
@@ -219,6 +222,10 @@ class VtexScraper:
         in_stock: bool = bool(offer.get("IsAvailable", False))
 
         category = category_path.strip("/").split("/")[-1]
+
+        # Imagen: primera imagen del primer ítem
+        images = first_item.get("images", [])
+        image_url: str | None = images[0].get("imageUrl") if images else None
 
         return {
             "sku": sku,
@@ -229,6 +236,7 @@ class VtexScraper:
             "discount_pct": _discount_pct(price, original_price),
             "in_stock": in_stock,
             "category": category,
+            "image_url": image_url,
         }
 
 

@@ -159,6 +159,15 @@ class MagentoScraper:
         unavailable = card.select_one("[class*='unavailable'], [class*='out-of-stock']")
         in_stock = unavailable is None
 
+        # Imagen del producto (data-src para lazy-load, src como fallback)
+        img_tag = card.select_one("img.product-image-photo")
+        image_url: str | None = None
+        if img_tag:
+            image_url = img_tag.get("data-src") or img_tag.get("src")
+            # Descartar placeholders pequeños (base64 o "placeholder")
+            if image_url and ("placeholder" in image_url or image_url.startswith("data:")):
+                image_url = None
+
         return {
             "sku": str(sku),
             "name": name,
@@ -168,6 +177,7 @@ class MagentoScraper:
             "discount_pct": _discount_pct(price, original_price),
             "in_stock": in_stock,
             "category": category,
+            "image_url": image_url,
         }
 
 
