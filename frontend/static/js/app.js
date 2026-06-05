@@ -241,6 +241,15 @@ function productCard(p) {
     ? `<img class="card-img" src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'">`
     : `<div class="card-img-placeholder">${esc((p.name ?? "?")[0].toUpperCase())}</div>`;
 
+  // Badge de delta desde que se guardó en favoritos
+  let savedDelta = "";
+  if (p.price_change_since_saved != null && Math.abs(p.price_change_since_saved) >= 100) {
+    const diff = p.price_change_since_saved;
+    savedDelta = diff < 0
+      ? `<span class="badge badge-down badge-saved" title="Desde que lo guardaste">↓ bajó ${colones(Math.abs(diff))}</span>`
+      : `<span class="badge badge-up badge-saved" title="Desde que lo guardaste">↑ subió ${colones(Math.abs(diff))}</span>`;
+  }
+
   return `
     <div class="product-card${p.in_stock === false ? " card-out-of-stock" : ""}" data-id='${esc(JSON.stringify(p))}'>
       <button class="fav-btn${fav ? " fav-active" : ""}" data-pid="${p.product_id}" aria-label="Guardar en favoritos">♥</button>
@@ -252,6 +261,7 @@ function productCard(p) {
         ${original}
         ${discount}
         ${variation}
+        ${savedDelta}
       </div>
       <div class="card-footer">
         <span>${stock}</span>
@@ -540,15 +550,41 @@ function initInflationPeriodBtns() {
 
 // ── Favorites view ────────────────────────────────────────────────────────
 
-function loadFavoritesView() {
+async function loadFavoritesView() {
   const grid = document.getElementById("favorites-grid");
   const favs = getFavorites();
+
   if (!favs.length) {
     grid.innerHTML = `<p class="empty">Todavía no tenés favoritos.<br>
       Hacé clic en <strong>♥</strong> en cualquier producto para guardarlo aquí.</p>`;
     return;
   }
+
+  // 1. Mostrar datos guardados al instante (pueden ser viejos)
   grid.innerHTML = favs.map(productCard).join("");
+  attachCardHandlers(grid);
+
+  // 2. Refrescar precios en paralelo desde la API
+  const refreshed = await Promise.all(
+    favs.map(async (fav) => {
+      try {
+        const h = await getHistory(fav.product_id);
+        const currentPrice = h.current_price ?? fav.price;
+        const savedPrice   = fav.saved_price ?? fav.price;
+        return {
+          ...fav,
+          price: currentPrice,
+          price_change_since_saved:
+            savedPrice && currentPrice != null ? currentPrice - savedPrice : null,
+        };
+      } catch {
+        return fav; // si falla, mantener datos guardados
+      }
+    })
+  );
+
+  // 3. Re-renderizar con precios frescos y badge de variación
+  grid.innerHTML = refreshed.map(productCard).join("");
   attachCardHandlers(grid);
 }
 

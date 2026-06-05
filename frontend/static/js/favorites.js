@@ -32,7 +32,7 @@ export function toggleFavorite(product) {
     save(data);
     return false;
   }
-  data[key] = { ...product, saved_at: new Date().toISOString() };
+  data[key] = { ...product, saved_price: product.price, saved_at: new Date().toISOString() };
   save(data);
   return true;
 }
