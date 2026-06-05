@@ -344,11 +344,13 @@ async function loadTrending() {
   const grid = document.getElementById("trending-grid");
   grid.innerHTML = `<div class="spinner">Cargando…</div>`;
   try {
-    const results = await getTrending(7, 50);
-    if (!results.length) {
+    const raw     = await getTrending(7, 50);
+    if (!raw.length) {
       grid.innerHTML = `<p class="empty">Aún no hay suficientes datos históricos para calcular aumentos. Volvé en unos días.</p>`;
       return;
     }
+    const sortBy  = document.getElementById("sort-by").value;
+    const results = sortBy === "price-asc" ? raw : sortProducts(raw, sortBy);
     grid.innerHTML = results.map(productCard).join("");
     attachCardHandlers(grid);
   } catch (e) {
@@ -387,7 +389,12 @@ function initSearch() {
 
   input.addEventListener("input", run);
   selStore.addEventListener("change", run);
-  document.getElementById("sort-by").addEventListener("change", run);
+  document.getElementById("sort-by").addEventListener("change", () => {
+    // Si está en trending, re-renderizar trending ordenado; si no, re-buscar
+    const isDefault = !input.value.trim() && !activeCategory && !selStore.value;
+    if (isDefault) loadTrending();
+    else run();
+  });
 
   // Poblar filtro de tiendas
   getStores().then((stores) => {
