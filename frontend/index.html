@@ -10,7 +10,7 @@
     content="Seguí los precios de electrodomésticos y tecnología en tiendas de Costa Rica. Detectá ofertas reales, compará historial de precios y monitoreá la inflación.">
   <meta name="robots" content="index, follow">
 
-  <!-- Open Graph (Facebook, WhatsApp, LinkedIn…) -->
+  <!-- Open Graph -->
   <meta property="og:type"        content="website">
   <meta property="og:site_name"   content="Precio Tracker CR">
   <meta property="og:title"       content="Precio Tracker CR — Historial de precios en Costa Rica">
@@ -27,7 +27,10 @@
 <body>
 
 <header>
-  <div class="logo">PrecioTracker <span>CR</span></div>
+  <div class="header-brand">
+    <div class="logo">PrecioTracker <span>CR</span></div>
+    <div class="tagline">Precios en tiempo real · 5 tiendas · Costa Rica</div>
+  </div>
   <nav>
     <button class="active" data-view="view-products">Productos</button>
     <button data-view="view-deals">Ofertas</button>
@@ -76,7 +79,7 @@
       <div id="trending-grid" class="products-grid"></div>
     </div>
 
-    <!-- Resultados de búsqueda (ocultos hasta que el usuario escriba) -->
+    <!-- Resultados de búsqueda -->
     <div id="search-results-section" class="hidden">
       <div id="products-grid" class="products-grid"></div>
     </div>
@@ -121,6 +124,34 @@
   </div>
 
 </main>
+
+<!-- ── Footer ────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-col">
+      <div class="footer-logo">PrecioTracker <span>CR</span></div>
+      <p>Monitoreamos los precios de electrodomésticos, celulares y tecnología en las principales tiendas de Costa Rica para que siempre comprés al mejor precio.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Metodología</h4>
+      <p>Los precios se actualizan automáticamente <strong>dos veces al día</strong>. Las variaciones se calculan comparando el precio actual con el historial de cada producto. Las "ofertas engañosas" se detectan cuando el descuento anunciado no coincide con la baja real de precio histórico.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Tiendas cubiertas</h4>
+      <ul class="footer-stores-list">
+        <li>Walmart CR</li>
+        <li>Siman CR</li>
+        <li>Gollo</li>
+        <li>Monge</li>
+        <li>Verdugo</li>
+      </ul>
+      <p style="margin-top:.75rem;font-size:.78rem">¿Falta una tienda? Escribinos.</p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 PrecioTracker CR · Los precios son referenciales. Verificá en la tienda antes de comprar. No somos responsables por variaciones de último momento.</p>
+  </div>
+</footer>
 
 <!-- ── Modal historial ───────────────────────────────── -->
 <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true">
