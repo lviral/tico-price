@@ -40,10 +40,13 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     "tecnologia":                  "electronica",
     "gaming":                      "electronica",
     # Cuidado del cabello / electrobelleza
-    "cuidado-personal":            "cuidado-cabello",
-    "cuidado-de-cabello":          "cuidado-cabello",
-    "cuidado-del-cabello":         "cuidado-cabello",
-    "electrobelleza":              "cuidado-cabello",
+    "cuidado-personal":                        "cuidado-cabello",
+    "cuidado-de-cabello":                      "cuidado-cabello",
+    "cuidado-del-cabello":                     "cuidado-cabello",
+    "electrobelleza":                          "cuidado-cabello",
+    "alisadores-y-onduladores":                "cuidado-cabello",
+    "secadores-de-pelo":                       "cuidado-cabello",
+    "herramientas-para-estilizar-el-cabello":  "cuidado-cabello",
 }
 
 # Categorías por nombre de tienda. Ajustar aquí cuando se agreguen tiendas.
