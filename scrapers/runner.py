@@ -39,6 +39,11 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     "electronics":                 "electronica",
     "tecnologia":                  "electronica",
     "gaming":                      "electronica",
+    # Cuidado del cabello / electrobelleza
+    "cuidado-personal":            "cuidado-cabello",
+    "cuidado-de-cabello":          "cuidado-cabello",
+    "cuidado-del-cabello":         "cuidado-cabello",
+    "electrobelleza":              "cuidado-cabello",
 }
 
 # Categorías por nombre de tienda. Ajustar aquí cuando se agreguen tiendas.
@@ -63,11 +68,13 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "/electronica/computacion",      # cat 109
         "/electronica/electrodomesticos",# cat 56
         "/electronica/audio",            # cat 107
+        "/higiene-y-belleza/cuidado-del-cabello",
     ],
     "Siman CR": [
         "/linea-blanca",                 # cat 37
         "/tecnologia",                   # cat 35: celulares, audio, computadoras
         "/electrodomesticos",            # cat 1145
+        "/belleza-e-higiene/electrobelleza",
     ],
     "Aliss CR": [
         "https://aliss.cr/electronics",
