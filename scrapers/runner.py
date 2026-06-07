@@ -122,6 +122,9 @@ class StoreResult:
 # Lógica de scraping por tienda
 # ---------------------------------------------------------------------------
 
+MIN_PRICE = 5_000  # Filtrar accesorios y productos no eléctricos
+
+
 def _process_product(store_id: int, data: dict) -> bool:
     """Persiste un producto + precio. Retorna True si fue exitoso."""
     data = dict(data)
@@ -129,6 +132,9 @@ def _process_product(store_id: int, data: dict) -> bool:
     normalized = CATEGORY_NORMALIZE.get(cat, cat)
     data["category"] = normalized
     if normalized not in CATEGORY_ALLOWLIST:
+        return False
+    price = data.get("price") or 0
+    if price < MIN_PRICE:
         return False
     try:
         save_product(store_id, data)
