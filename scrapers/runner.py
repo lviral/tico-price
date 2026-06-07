@@ -42,6 +42,8 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     "electronics":                 "electronica",
     "tecnologia":                  "electronica",
     "gaming":                      "electronica",
+    "computacion":                 "electronica",
+    "audio":                       "electronica",
     # Cuidado del cabello / electrobelleza
     "cuidado-personal":                        "cuidado-cabello",
     "cuidado-de-cabello":                      "cuidado-cabello",
