@@ -55,10 +55,21 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     "audio":                      "audio",
     "audio-video":                "audio",
     "audio-y-video":              "audio",
+    # Tablets
+    "tablets":                    "tablets",
+    "tablet":                     "tablets",
+    "ipad-y-tablet":              "tablets",
+    # Aires acondicionados
+    "aires-acondicionados":                 "aires-acondicionados",
+    "aire-acondicionado":                   "aires-acondicionados",
+    "aires-acondicionados-y-ventiladores":  "aires-acondicionados",
     # Videojuegos / gaming
     "gaming":                     "videojuegos",
     "gamer-lab":                  "videojuegos",
     "consolas":                   "videojuegos",
+    # Aliss CR slugs en inglés
+    "cell-phones":                "celulares",
+    "computers-office":           "computacion",
     # Ignorados (no en allowlist)
     "electronics":                "electronica",
     "tecnologia":                 "electronica",
@@ -82,10 +93,14 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.gollo.com/c/pequenos-electrodomesticos",
         "https://www.gollo.com/c/gaming",
         "https://www.gollo.com/c/computacion",
+        "https://www.gollo.com/c/tablets",
+        "https://www.gollo.com/c/aires-acondicionados",
     ],
     "Monge": [
         "https://www.tiendamonge.com/productos/hogar",
+        "https://www.tiendamonge.com/productos/hogar/aires-acondicionados",
         "https://www.tiendamonge.com/productos/celulares-y-tablets/celulares",
+        "https://www.tiendamonge.com/productos/celulares-y-tablets/tablets",
         "https://www.tiendamonge.com/productos/tv-y-video/pantallas",
         "https://www.tiendamonge.com/productos/audio",
         "https://www.tiendamonge.com/productos/electrodomesticos",
@@ -96,6 +111,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
     "Verdugo": [
         "https://www.verdugotienda.com/productos/hogar",
         "https://www.verdugotienda.com/productos/celulares-y-tablets/celulares",
+        "https://www.verdugotienda.com/productos/celulares-y-tablets/tablets",
         "https://www.verdugotienda.com/productos/tv-y-video/pantallas",
         "https://www.verdugotienda.com/productos/audio",
         "https://www.verdugotienda.com/productos/electrodomesticos",
@@ -107,23 +123,29 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "/electronica/celulares",
         "/electronica/televisores",
         "/electronica/electrodomesticos",
+        "/electronica/electrodomesticos/aires-acondicionados-y-ventiladores",
         "/electronica/audio",
         "/electronica/videojuegos",
         "/electronica/computacion",
+        "/electronica/computacion/ipad-y-tablet",
     ],
     "Siman CR": [
         "/linea-blanca",
         "/linea-blanca/refrigeradoras",
         "/linea-blanca/lavadoras",
+        "/linea-blanca/ventilacion/aires-acondicionados",
         "/electrodomesticos",
         "/tecnologia/telefonos/celulares",
         "/tecnologia/televisores",
         "/tecnologia/audio-y-video",
         "/tecnologia/computadoras/laptops",
+        "/tecnologia/computadoras/tablets",
         "/belleza-e-higiene/electrobelleza",
     ],
     "Aliss CR": [
         "https://aliss.cr/pequenos-electrodomesticos",
+        "https://aliss.cr/electronics/cell-phones",
+        "https://aliss.cr/electronics/computers-office",
     ],
     "EPA CR": [
         "https://cr.epaenlinea.com/electrodomesticos.html",
@@ -147,6 +169,8 @@ CATEGORY_ALLOWLIST: set[str] = {
     "cuidado-cabello",
     "videojuegos",
     "computacion",
+    "tablets",
+    "aires-acondicionados",
 }
 
 

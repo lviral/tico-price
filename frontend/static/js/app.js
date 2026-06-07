@@ -240,9 +240,17 @@ function productCard(p) {
     : `<span class="dot dot-gray"></span> Agotado`;
   const fav = isFavorite(p.product_id);
 
+  const CAT_ICON = {
+    "celulares": "📱", "televisores": "📺", "audio": "🔊",
+    "linea-blanca": "🏠", "electrodomesticos": "⚡", "computacion": "💻",
+    "videojuegos": "🎮", "tablets": "📲", "aires-acondicionados": "❄️",
+    "cuidado-cabello": "💇",
+  };
+  const icon = CAT_ICON[p.category] ?? "📦";
   const image = p.image_url
-    ? `<img class="card-img" src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'">`
-    : `<div class="card-img-placeholder">${esc((p.name ?? "?")[0].toUpperCase())}</div>`;
+    ? `<img class="card-img" src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy"
+         onerror="this.parentElement.innerHTML='<div class=\\'card-img-placeholder\\'>${icon}</div>'">`
+    : `<div class="card-img-placeholder">${icon}</div>`;
 
   // Badge de delta desde que se guardó en favoritos
   let savedDelta = "";
