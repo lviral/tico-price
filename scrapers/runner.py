@@ -320,7 +320,7 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
     log.info("=" * 55)
 
     for r in results:
-        status = "OK" if r.ok() else f"⚠ {r.errors} errores"
+        status = "OK" if r.ok() else f"WARN {r.errors} errores"
         log.info(
             "  %-14s  nuevos=%4d  precios=%4d  %s",
             r.store_name, r.new_products, r.prices_recorded, status,
