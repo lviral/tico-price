@@ -25,27 +25,33 @@ SCRAPER_MAP = {
 CATEGORY_NORMALIZE: dict[str, str] = {
     # Línea blanca
     "hogar-y-linea-blanca":       "linea-blanca",
+    "refrigeracion":              "linea-blanca",
+    "refrigeradoras":             "linea-blanca",
+    "lavadoras":                  "linea-blanca",
+    "lavadoras-y-secadoras":      "linea-blanca",
+    "cocinas":                    "linea-blanca",
+    "cocina":                     "linea-blanca",
+    "microondas":                 "linea-blanca",
     # Celulares
     "celulares-y-tablets":        "celulares",
-    "telefonia":                   "celulares",
-    "smartphones":                 "celulares",
-    # Televisores / audio-video
-    "tv-y-video":                  "televisores",
-    "audio-video":                 "televisores",
+    "celulares-y-telefonos":      "celulares",
+    "telefonia":                  "celulares",
+    "telefonos":                  "celulares",
+    "smartphones":                "celulares",
+    # Televisores
+    "tv-y-video":                 "televisores",
     # Electrodomésticos
-    "pequenos-electrodomesticos":  "electrodomesticos",
-    "small-appliances":            "electrodomesticos",
-    # Cocinas / línea blanca
-    "cocinas":                     "linea-blanca",
-    "microondas":                  "linea-blanca",
+    "pequenos-electrodomesticos": "electrodomesticos",
+    "small-appliances":           "electrodomesticos",
     # Audio / sonido
-    "audio":                       "audio",
-    "audio-video":                 "audio",
+    "audio":                      "audio",
+    "audio-video":                "audio",
+    "audio-y-video":              "audio",
     # Ignorados (no en allowlist)
-    "electronics":                 "electronica",
-    "tecnologia":                  "electronica",
-    "gaming":                      "electronica",
-    "computacion":                 "electronica",
+    "electronics":                "electronica",
+    "tecnologia":                 "electronica",
+    "gaming":                     "electronica",
+    "computacion":                "electronica",
     # Cuidado del cabello / electrobelleza
     "cuidado-personal":                        "cuidado-cabello",
     "cuidado-de-cabello":                      "cuidado-cabello",
@@ -62,34 +68,51 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.gollo.com/c/linea-blanca",
         "https://www.gollo.com/c/tv-y-video",
         "https://www.gollo.com/c/telefonia",
+        "https://www.gollo.com/c/audio",
+        "https://www.gollo.com/c/pequenos-electrodomesticos",
     ],
     "Monge": [
         "https://www.tiendamonge.com/hogar-y-linea-blanca",
         "https://www.tiendamonge.com/celulares-y-tablets",
+        "https://www.tiendamonge.com/tv-y-video",
+        "https://www.tiendamonge.com/audio-video",
+        "https://www.tiendamonge.com/pequenos-electrodomesticos",
     ],
     "Verdugo": [
         "https://www.verdugotienda.com/hogar-y-linea-blanca",
         "https://www.verdugotienda.com/celulares-y-tablets",
+        "https://www.verdugotienda.com/tv-y-video",
+        "https://www.verdugotienda.com/audio-video",
+        "https://www.verdugotienda.com/pequenos-electrodomesticos",
     ],
     "Walmart CR": [
         "/electronica/linea-blanca",
-        "/electronica/celulares",        # cat 108
-        "/electronica/televisores",      # cat 111
-        "/electronica/electrodomesticos",# cat 56
-        "/electronica/audio",            # cat 107
+        "/electronica/celulares",
+        "/electronica/televisores",
+        "/electronica/electrodomesticos",
+        "/electronica/audio",
     ],
     "Siman CR": [
-        "/linea-blanca",                 # cat 37
-        "/tecnologia",                   # cat 35: celulares, audio, computadoras
-        "/electrodomesticos",            # cat 1145
+        "/linea-blanca",
+        "/linea-blanca/refrigeradoras",
+        "/linea-blanca/lavadoras",
+        "/electrodomesticos",
+        "/tecnologia/telefonos",
+        "/tecnologia/televisores",
+        "/tecnologia/audio-y-video",
         "/belleza-e-higiene/electrobelleza",
     ],
     "Aliss CR": [
-        "https://aliss.cr/electronics",
+        "https://aliss.cr/pequenos-electrodomesticos",
     ],
     "EPA CR": [
         "https://cr.epaenlinea.com/electrodomesticos.html",
         "https://cr.epaenlinea.com/cocinas.html",
+        "https://cr.epaenlinea.com/refrigeracion.html",
+        "https://cr.epaenlinea.com/lavadoras.html",
+        "https://cr.epaenlinea.com/televisores.html",
+        "https://cr.epaenlinea.com/audio-y-video.html",
+        "https://cr.epaenlinea.com/celulares.html",
     ],
 }
 
