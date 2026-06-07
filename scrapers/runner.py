@@ -35,6 +35,9 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     # Electrodomésticos
     "pequenos-electrodomesticos":  "electrodomesticos",
     "small-appliances":            "electrodomesticos",
+    # Cocinas / línea blanca
+    "cocinas":                     "linea-blanca",
+    "microondas":                  "linea-blanca",
     # Electrónica general
     "electronics":                 "electronica",
     "tecnologia":                  "electronica",
@@ -84,6 +87,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
     ],
     "EPA CR": [
         "https://cr.epaenlinea.com/electrodomesticos.html",
+        "https://cr.epaenlinea.com/cocinas.html",
     ],
 }
 
