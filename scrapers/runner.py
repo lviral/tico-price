@@ -38,12 +38,14 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     # Cocinas / línea blanca
     "cocinas":                     "linea-blanca",
     "microondas":                  "linea-blanca",
-    # Electrónica general
+    # Audio / sonido
+    "audio":                       "audio",
+    "audio-video":                 "audio",
+    # Ignorados (no en allowlist)
     "electronics":                 "electronica",
     "tecnologia":                  "electronica",
     "gaming":                      "electronica",
     "computacion":                 "electronica",
-    "audio":                       "electronica",
     # Cuidado del cabello / electrobelleza
     "cuidado-personal":                        "cuidado-cabello",
     "cuidado-de-cabello":                      "cuidado-cabello",
@@ -73,7 +75,6 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "/electronica/linea-blanca",
         "/electronica/celulares",        # cat 108
         "/electronica/televisores",      # cat 111
-        "/electronica/computacion",      # cat 109
         "/electronica/electrodomesticos",# cat 56
         "/electronica/audio",            # cat 107
     ],
@@ -94,7 +95,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
 
 # Solo se persisten productos cuya categoría normalizada esté en este set.
 CATEGORY_ALLOWLIST: set[str] = {
-    "electronica",
+    "audio",
     "linea-blanca",
     "electrodomesticos",
     "celulares",
