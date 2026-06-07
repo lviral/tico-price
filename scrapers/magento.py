@@ -79,7 +79,6 @@ class MagentoScraper:
         # Normalizar nombres en inglés a español
         _NORMALIZE = {
             "electronics": "electronica",
-            "gaming":       "tecnologia",
         }
         category = _NORMALIZE.get(category, category)
         results: list[dict] = []

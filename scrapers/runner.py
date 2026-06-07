@@ -82,8 +82,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.tiendamonge.com/productos/tv-y-video/pantallas",
         "https://www.tiendamonge.com/productos/audio",
         "https://www.tiendamonge.com/productos/electrodomesticos",
-        "https://www.tiendamonge.com/productos/gamer-lab/consolas",
-        "https://www.tiendamonge.com/productos/gamer-lab/videojuegos",
+        "https://www.tiendamonge.com/productos/gamer-lab",
     ],
     "Verdugo": [
         "https://www.verdugotienda.com/productos/hogar",
@@ -91,8 +90,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.verdugotienda.com/productos/tv-y-video/pantallas",
         "https://www.verdugotienda.com/productos/audio",
         "https://www.verdugotienda.com/productos/electrodomesticos",
-        "https://www.verdugotienda.com/productos/gamer-lab/consolas",
-        "https://www.verdugotienda.com/productos/gamer-lab/videojuegos",
+        "https://www.verdugotienda.com/gamer-lab",
     ],
     "Walmart CR": [
         "/electronica/linea-blanca",
