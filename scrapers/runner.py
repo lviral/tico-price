@@ -48,10 +48,13 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     "audio":                      "audio",
     "audio-video":                "audio",
     "audio-y-video":              "audio",
+    # Videojuegos / gaming
+    "gaming":                     "videojuegos",
+    "gamer-lab":                  "videojuegos",
+    "consolas":                   "videojuegos",
     # Ignorados (no en allowlist)
     "electronics":                "electronica",
     "tecnologia":                 "electronica",
-    "gaming":                     "electronica",
     "computacion":                "electronica",
     # Cuidado del cabello / electrobelleza
     "cuidado-personal":                        "cuidado-cabello",
@@ -71,6 +74,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.gollo.com/c/telefonia",
         "https://www.gollo.com/c/audio",
         "https://www.gollo.com/c/pequenos-electrodomesticos",
+        "https://www.gollo.com/c/gaming",
     ],
     "Monge": [
         "https://www.tiendamonge.com/productos/hogar",
@@ -78,6 +82,8 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.tiendamonge.com/productos/tv-y-video/pantallas",
         "https://www.tiendamonge.com/productos/audio",
         "https://www.tiendamonge.com/productos/electrodomesticos",
+        "https://www.tiendamonge.com/productos/gamer-lab/consolas",
+        "https://www.tiendamonge.com/productos/gamer-lab/videojuegos",
     ],
     "Verdugo": [
         "https://www.verdugotienda.com/productos/hogar",
@@ -85,6 +91,8 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.verdugotienda.com/productos/tv-y-video/pantallas",
         "https://www.verdugotienda.com/productos/audio",
         "https://www.verdugotienda.com/productos/electrodomesticos",
+        "https://www.verdugotienda.com/productos/gamer-lab/consolas",
+        "https://www.verdugotienda.com/productos/gamer-lab/videojuegos",
     ],
     "Walmart CR": [
         "/electronica/linea-blanca",
@@ -92,6 +100,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "/electronica/televisores",
         "/electronica/electrodomesticos",
         "/electronica/audio",
+        "/electronica/videojuegos",
     ],
     "Siman CR": [
         "/linea-blanca",
@@ -125,6 +134,7 @@ CATEGORY_ALLOWLIST: set[str] = {
     "celulares",
     "televisores",
     "cuidado-cabello",
+    "videojuegos",
 }
 
 
