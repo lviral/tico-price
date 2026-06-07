@@ -41,6 +41,13 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     "smartphones":                "celulares",
     # Televisores
     "tv-y-video":                 "televisores",
+    "pantallas":                  "televisores",
+    # Computación
+    "computacion":                "computacion",
+    "computadoras":               "computacion",
+    "laptops":                    "computacion",
+    "laptop":                     "computacion",
+    "computadoras-gaming":        "computacion",
     # Electrodomésticos
     "pequenos-electrodomesticos": "electrodomesticos",
     "small-appliances":           "electrodomesticos",
@@ -55,7 +62,6 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     # Ignorados (no en allowlist)
     "electronics":                "electronica",
     "tecnologia":                 "electronica",
-    "computacion":                "electronica",
     # Cuidado del cabello / electrobelleza
     "cuidado-personal":                        "cuidado-cabello",
     "cuidado-de-cabello":                      "cuidado-cabello",
@@ -75,6 +81,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.gollo.com/c/audio",
         "https://www.gollo.com/c/pequenos-electrodomesticos",
         "https://www.gollo.com/c/gaming",
+        "https://www.gollo.com/c/computacion",
     ],
     "Monge": [
         "https://www.tiendamonge.com/productos/hogar",
@@ -83,6 +90,8 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.tiendamonge.com/productos/audio",
         "https://www.tiendamonge.com/productos/electrodomesticos",
         "https://www.tiendamonge.com/productos/gamer-lab",
+        "https://www.tiendamonge.com/productos/computadoras/laptops",
+        "https://www.tiendamonge.com/productos/computadoras/desktop/computadoras-de-escritorio",
     ],
     "Verdugo": [
         "https://www.verdugotienda.com/productos/hogar",
@@ -91,6 +100,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.verdugotienda.com/productos/audio",
         "https://www.verdugotienda.com/productos/electrodomesticos",
         "https://www.verdugotienda.com/gamer-lab",
+        "https://www.verdugotienda.com/productos/computadoras",
     ],
     "Walmart CR": [
         "/electronica/linea-blanca",
@@ -99,15 +109,17 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "/electronica/electrodomesticos",
         "/electronica/audio",
         "/electronica/videojuegos",
+        "/electronica/computacion",
     ],
     "Siman CR": [
         "/linea-blanca",
         "/linea-blanca/refrigeradoras",
         "/linea-blanca/lavadoras",
         "/electrodomesticos",
-        "/tecnologia/telefonos",
+        "/tecnologia/telefonos/celulares",
         "/tecnologia/televisores",
         "/tecnologia/audio-y-video",
+        "/tecnologia/computadoras/laptops",
         "/belleza-e-higiene/electrobelleza",
     ],
     "Aliss CR": [
@@ -121,6 +133,7 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://cr.epaenlinea.com/televisores.html",
         "https://cr.epaenlinea.com/audio-y-video.html",
         "https://cr.epaenlinea.com/celulares.html",
+        "https://cr.epaenlinea.com/laptops.html",
     ],
 }
 
@@ -133,6 +146,7 @@ CATEGORY_ALLOWLIST: set[str] = {
     "televisores",
     "cuidado-cabello",
     "videojuegos",
+    "computacion",
 }
 
 
@@ -156,7 +170,7 @@ class StoreResult:
 # Lógica de scraping por tienda
 # ---------------------------------------------------------------------------
 
-MIN_PRICE = 10_000  # Filtrar accesorios y productos no eléctricos
+MIN_PRICE = 20_000  # Filtrar accesorios y productos baratos
 
 
 def _process_product(store_id: int, data: dict) -> tuple[bool, bool]:
