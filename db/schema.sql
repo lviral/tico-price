@@ -51,6 +51,26 @@ CREATE INDEX IF NOT EXISTS idx_price_history_product_id ON price_history(product
 CREATE INDEX IF NOT EXISTS idx_price_history_scraped_at  ON price_history(scraped_at);
 CREATE INDEX IF NOT EXISTS idx_products_store_id         ON products(store_id);
 
+-- FTS5: búsqueda de texto completo en nombres de productos.
+-- Standalone (no content=): almacena name directamente para búsqueda confiable.
+CREATE VIRTUAL TABLE IF NOT EXISTS products_fts USING fts5(
+    name,
+    tokenize = "unicode61 remove_diacritics 2"
+);
+
+CREATE TRIGGER IF NOT EXISTS products_fts_ai AFTER INSERT ON products BEGIN
+    INSERT INTO products_fts(rowid, name) VALUES (new.id, new.name);
+END;
+
+CREATE TRIGGER IF NOT EXISTS products_fts_au AFTER UPDATE OF name ON products BEGIN
+    DELETE FROM products_fts WHERE rowid = old.id;
+    INSERT INTO products_fts(rowid, name) VALUES (new.id, new.name);
+END;
+
+CREATE TRIGGER IF NOT EXISTS products_fts_ad AFTER DELETE ON products BEGIN
+    DELETE FROM products_fts WHERE rowid = old.id;
+END;
+
 INSERT OR IGNORE INTO stores (name, base_url, scraper_type) VALUES
     ('Gollo',      'https://www.gollo.com',          'magento'),
     ('Monge',      'https://www.tiendamonge.com',    'magento'),

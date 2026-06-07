@@ -219,7 +219,7 @@ def _process_product(store_id: int, data: dict) -> tuple[bool, bool]:
             "Error guardando producto sku=%s store_id=%d: %s",
             data.get("sku", "?"), store_id, exc,
         )
-        return False
+        return False, False
 
 
 def run_store(store_id: int, store_name: str, scraper_type: str, base_url: str) -> StoreResult:

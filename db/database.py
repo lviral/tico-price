@@ -1,3 +1,4 @@
+import re
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -34,6 +35,7 @@ def get_db() -> Generator[sqlite3.Connection, None, None]:
 def init_db() -> None:
     sql = SCHEMA_PATH.read_text(encoding="utf-8")
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     try:
         conn.executescript(sql)
         # Migraciones para BDs existentes (ALTER TABLE no soporta IF NOT EXISTS)
@@ -47,6 +49,57 @@ def init_db() -> None:
                 conn.commit()
             except sqlite3.OperationalError:
                 pass  # la columna ya existe
+
+        # Migración FTS5: recrear índice standalone si existe como content table
+        try:
+            schema_row = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE name = 'products_fts'"
+            ).fetchone()
+            is_content_table = (
+                schema_row is not None and "content" in (schema_row["sql"] or "").lower()
+            )
+            if is_content_table:
+                # Eliminar tabla y triggers del schema viejo
+                for obj in ["products_fts_ai", "products_fts_au", "products_fts_ad"]:
+                    conn.execute(f"DROP TRIGGER IF EXISTS {obj}")
+                conn.execute("DROP TABLE IF EXISTS products_fts")
+                conn.commit()
+
+            # Crear tabla y triggers (CREATE ... IF NOT EXISTS en schema.sql ya los define;
+            # aquí los creamos manualmente para la migración sobre BD existente)
+            conn.execute("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS products_fts USING fts5(
+                    name,
+                    tokenize = "unicode61 remove_diacritics 2"
+                )
+            """)
+            conn.execute("""
+                CREATE TRIGGER IF NOT EXISTS products_fts_ai AFTER INSERT ON products BEGIN
+                    INSERT INTO products_fts(rowid, name) VALUES (new.id, new.name);
+                END
+            """)
+            conn.execute("""
+                CREATE TRIGGER IF NOT EXISTS products_fts_au AFTER UPDATE OF name ON products BEGIN
+                    DELETE FROM products_fts WHERE rowid = old.id;
+                    INSERT INTO products_fts(rowid, name) VALUES (new.id, new.name);
+                END
+            """)
+            conn.execute("""
+                CREATE TRIGGER IF NOT EXISTS products_fts_ad AFTER DELETE ON products BEGIN
+                    DELETE FROM products_fts WHERE rowid = old.id;
+                END
+            """)
+            conn.commit()
+
+            # Poblar si está vacío
+            fts_count = conn.execute("SELECT COUNT(*) FROM products_fts").fetchone()[0]
+            if fts_count == 0:
+                conn.execute(
+                    "INSERT INTO products_fts(rowid, name) SELECT id, name FROM products"
+                )
+                conn.commit()
+        except sqlite3.OperationalError:
+            pass  # FTS5 no disponible en esta versión de SQLite
     finally:
         conn.close()
 
@@ -213,6 +266,19 @@ def get_price_history(product_id: int, days: int = 30) -> list[sqlite3.Row]:
         return conn.execute(sql, (product_id, f"-{days}")).fetchall()
 
 
+def _fts_expr(raw: str) -> str | None:
+    """Convierte texto libre a expresión FTS5 con prefix matching por token.
+
+    Ejemplo: "samsung galaxy a55" → '"samsung"* "galaxy"* "a55"*'
+    Retorna None si no quedan tokens después de limpiar.
+    """
+    clean = re.sub(r'["\(\)\^\-\*\+]', ' ', raw)
+    tokens = [t for t in clean.split() if t]
+    if not tokens:
+        return None
+    return " ".join(f'"{t}"*' for t in tokens)
+
+
 def search_products(
     query: str,
     category: str | None = None,
@@ -221,23 +287,40 @@ def search_products(
 ) -> list[sqlite3.Row]:
     """Busca productos con filtros opcionales.
 
+    Usa FTS5 (prefix matching por token) cuando hay texto; devuelve todos los
+    productos ordenados por precio cuando la búsqueda está vacía.
+
     Columnas retornadas:
       product_id, sku, product_name, url, category, image_url,
       store_name, price, original_price, discount_pct, in_stock, scraped_at,
       price_7d_ago, price_30d_ago
     """
-    conditions = ["p.name LIKE ?"]
-    params: list = [f"%{query}%"]
-
-    if category:
-        conditions.append("p.category LIKE ?")
-        params.append(f"%{category}%")
-    if store:
-        conditions.append("s.name LIKE ?")
-        params.append(f"%{store}%")
-
-    where = " AND ".join(conditions)
-    sql = f"""
+    # Subconsultas de precio histórico reutilizadas en ambas ramas
+    _ph7 = """
+        LEFT JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                WHERE scraped_at <= datetime('now', '-7 days')
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) ph7 ON ph7.product_id = p.id
+    """
+    _ph30 = """
+        LEFT JOIN (
+            SELECT ph1.product_id, ph1.price
+            FROM price_history ph1
+            INNER JOIN (
+                SELECT product_id, MAX(id) AS max_id
+                FROM price_history
+                WHERE scraped_at <= datetime('now', '-30 days')
+                GROUP BY product_id
+            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
+        ) ph30 ON ph30.product_id = p.id
+    """
+    _select = """
         SELECT
             p.id          AS product_id,
             p.sku,
@@ -253,41 +336,73 @@ def search_products(
             ph.scraped_at,
             ph7.price     AS price_7d_ago,
             ph30.price    AS price_30d_ago
-        FROM products p
-        JOIN stores s ON s.id = p.store_id
+    """
+    _price_join = """
         LEFT JOIN price_history ph ON ph.id = (
             SELECT id FROM price_history
             WHERE product_id = p.id
             ORDER BY scraped_at DESC, id DESC
             LIMIT 1
         )
-        LEFT JOIN (
-            SELECT ph1.product_id, ph1.price
-            FROM price_history ph1
-            INNER JOIN (
-                SELECT product_id, MAX(id) AS max_id
-                FROM price_history
-                WHERE scraped_at <= datetime('now', '-7 days')
-                GROUP BY product_id
-            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
-        ) ph7 ON ph7.product_id = p.id
-        LEFT JOIN (
-            SELECT ph1.product_id, ph1.price
-            FROM price_history ph1
-            INNER JOIN (
-                SELECT product_id, MAX(id) AS max_id
-                FROM price_history
-                WHERE scraped_at <= datetime('now', '-30 days')
-                GROUP BY product_id
-            ) sub ON ph1.product_id = sub.product_id AND ph1.id = sub.max_id
-        ) ph30 ON ph30.product_id = p.id
-        WHERE {where}
+    """
+
+    extra_conds: list[str] = []
+    extra_params: list = []
+    if category:
+        extra_conds.append("p.category LIKE ?")
+        extra_params.append(f"%{category}%")
+    if store:
+        extra_conds.append("s.name LIKE ?")
+        extra_params.append(f"%{store}%")
+    extra_where = (" AND " + " AND ".join(extra_conds)) if extra_conds else ""
+
+    # ── Rama FTS5 (query no vacío) ──────────────────────────────────────────
+    expr = _fts_expr(query) if query else None
+    if expr:
+        sql = f"""
+            {_select}
+            FROM (SELECT rowid AS fts_id, rank FROM products_fts
+                  WHERE products_fts MATCH ?) ranked
+            JOIN products p ON p.id = ranked.fts_id
+            JOIN stores s ON s.id = p.store_id
+            {_price_join}
+            {_ph7}
+            {_ph30}
+            {"WHERE " + " AND ".join(extra_conds) if extra_conds else ""}
+            ORDER BY
+                ranked.rank,
+                CASE WHEN ph.price IS NULL OR ph.price = 0 THEN 1 ELSE 0 END,
+                ph.price ASC
+            LIMIT ?
+        """
+        params = [expr] + extra_params + [limit]
+        try:
+            with get_db() as conn:
+                return conn.execute(sql, params).fetchall()
+        except sqlite3.OperationalError:
+            pass  # FTS5 no disponible — caer en LIKE
+
+        # Fallback LIKE si FTS5 falla
+        extra_conds.insert(0, "p.name LIKE ?")
+        extra_params.insert(0, f"%{query}%")
+        extra_where = "AND " + " AND ".join(extra_conds)
+
+    # ── Rama sin texto (o fallback LIKE) ────────────────────────────────────
+    where = f"WHERE {' AND '.join(extra_conds)}" if extra_conds else ""
+    sql = f"""
+        {_select}
+        FROM products p
+        JOIN stores s ON s.id = p.store_id
+        {_price_join}
+        {_ph7}
+        {_ph30}
+        {where}
         ORDER BY
             CASE WHEN ph.price IS NULL OR ph.price = 0 THEN 1 ELSE 0 END,
             ph.price ASC
         LIMIT ?
     """
-    params.append(limit)
+    params = extra_params + [limit]
     with get_db() as conn:
         return conn.execute(sql, params).fetchall()
 
