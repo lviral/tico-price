@@ -100,7 +100,7 @@ nav button.active { background: #dbeafe; color: var(--primary); }
 }
 
 /* ── Layout ───────────────────────────────────────────── */
-main { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+main { max-width: 1600px; margin: 0 auto; padding: 1rem 1.25rem; }
 
 .view { display: none; }
 .view.active { display: block; }
@@ -182,7 +182,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
 /* ── Product grid ─────────────────────────────────────── */
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1rem;
 }
 
