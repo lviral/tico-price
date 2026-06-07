@@ -25,6 +25,7 @@ SCRAPER_MAP = {
 CATEGORY_NORMALIZE: dict[str, str] = {
     # Línea blanca
     "hogar-y-linea-blanca":       "linea-blanca",
+    "hogar":                      "linea-blanca",
     "refrigeracion":              "linea-blanca",
     "refrigeradoras":             "linea-blanca",
     "lavadoras":                  "linea-blanca",
@@ -72,18 +73,18 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://www.gollo.com/c/pequenos-electrodomesticos",
     ],
     "Monge": [
-        "https://www.tiendamonge.com/hogar-y-linea-blanca",
-        "https://www.tiendamonge.com/celulares-y-tablets",
-        "https://www.tiendamonge.com/tv-y-video",
-        "https://www.tiendamonge.com/audio-video",
-        "https://www.tiendamonge.com/pequenos-electrodomesticos",
+        "https://www.tiendamonge.com/productos/hogar",
+        "https://www.tiendamonge.com/productos/celulares-y-tablets/celulares",
+        "https://www.tiendamonge.com/productos/tv-y-video/pantallas",
+        "https://www.tiendamonge.com/productos/audio",
+        "https://www.tiendamonge.com/productos/electrodomesticos",
     ],
     "Verdugo": [
-        "https://www.verdugotienda.com/hogar-y-linea-blanca",
-        "https://www.verdugotienda.com/celulares-y-tablets",
-        "https://www.verdugotienda.com/tv-y-video",
-        "https://www.verdugotienda.com/audio-video",
-        "https://www.verdugotienda.com/pequenos-electrodomesticos",
+        "https://www.verdugotienda.com/productos/hogar",
+        "https://www.verdugotienda.com/productos/celulares-y-tablets/celulares",
+        "https://www.verdugotienda.com/productos/tv-y-video/pantallas",
+        "https://www.verdugotienda.com/productos/audio",
+        "https://www.verdugotienda.com/productos/electrodomesticos",
     ],
     "Walmart CR": [
         "/electronica/linea-blanca",
