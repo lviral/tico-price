@@ -76,7 +76,6 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "/electronica/computacion",      # cat 109
         "/electronica/electrodomesticos",# cat 56
         "/electronica/audio",            # cat 107
-        "/higiene-y-belleza/cuidado-del-cabello",
     ],
     "Siman CR": [
         "/linea-blanca",                 # cat 37
@@ -124,7 +123,7 @@ class StoreResult:
 # Lógica de scraping por tienda
 # ---------------------------------------------------------------------------
 
-MIN_PRICE = 5_000  # Filtrar accesorios y productos no eléctricos
+MIN_PRICE = 10_000  # Filtrar accesorios y productos no eléctricos
 
 
 def _process_product(store_id: int, data: dict) -> bool:
