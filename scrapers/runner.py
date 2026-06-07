@@ -127,20 +127,23 @@ class StoreResult:
 MIN_PRICE = 10_000  # Filtrar accesorios y productos no eléctricos
 
 
-def _process_product(store_id: int, data: dict) -> bool:
-    """Persiste un producto + precio. Retorna True si fue exitoso."""
+def _process_product(store_id: int, data: dict) -> tuple[bool, bool]:
+    """Filtra, normaliza y persiste un producto + precio.
+
+    Returns (saved, is_new). saved=False significa filtrado o error.
+    """
     data = dict(data)
     cat = data.get("category") or ""
     normalized = CATEGORY_NORMALIZE.get(cat, cat)
     data["category"] = normalized
     if normalized not in CATEGORY_ALLOWLIST:
-        return False
+        return False, False
     price = data.get("price") or 0
     if price < MIN_PRICE:
-        return False
+        return False, False
     try:
-        save_product(store_id, data)
-        return True
+        _, is_new = save_product(store_id, data)
+        return True, is_new
     except Exception as exc:
         log.error(
             "Error guardando producto sku=%s store_id=%d: %s",
@@ -177,16 +180,11 @@ def run_store(store_id: int, store_name: str, scraper_type: str, base_url: str) 
             continue
 
         for data in products:
-            try:
-                _, is_new = save_product(store_id, data)
+            saved, is_new = _process_product(store_id, data)
+            if saved:
                 if is_new:
                     result.new_products += 1
                 result.prices_recorded += 1
-            except Exception as exc:
-                log.error(
-                    "  Error guardando sku=%s: %s", data.get("sku", "?"), exc
-                )
-                result.errors += 1
 
     result.elapsed_s = time.monotonic() - t0
     log.info(
