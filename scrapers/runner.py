@@ -81,15 +81,20 @@ STORE_CATEGORIES: dict[str, list[str]] = {
     ],
     "Aliss CR": [
         "https://aliss.cr/electronics",
-        "https://aliss.cr/pequenos-electrodomesticos",
     ],
     "EPA CR": [
         "https://cr.epaenlinea.com/electrodomesticos.html",
-        "https://cr.epaenlinea.com/herramientas-electricas.html",
-        "https://cr.epaenlinea.com/iluminacion.html",
-        "https://cr.epaenlinea.com/cocinas.html",
-        "https://cr.epaenlinea.com/seguridad.html",
     ],
+}
+
+# Solo se persisten productos cuya categoría normalizada esté en este set.
+CATEGORY_ALLOWLIST: set[str] = {
+    "electronica",
+    "linea-blanca",
+    "electrodomesticos",
+    "celulares",
+    "televisores",
+    "cuidado-cabello",
 }
 
 
@@ -115,10 +120,12 @@ class StoreResult:
 
 def _process_product(store_id: int, data: dict) -> bool:
     """Persiste un producto + precio. Retorna True si fue exitoso."""
-    # Normalizar categoría antes de guardar
     data = dict(data)
     cat = data.get("category") or ""
-    data["category"] = CATEGORY_NORMALIZE.get(cat, cat)
+    normalized = CATEGORY_NORMALIZE.get(cat, cat)
+    data["category"] = normalized
+    if normalized not in CATEGORY_ALLOWLIST:
+        return False
     try:
         save_product(store_id, data)
         return True
