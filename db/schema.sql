@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS stores (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     name         TEXT    NOT NULL UNIQUE,
     base_url     TEXT    NOT NULL,
-    scraper_type TEXT    NOT NULL CHECK (scraper_type IN ('magento', 'vtex')),
+    scraper_type TEXT    NOT NULL CHECK (scraper_type IN ('magento', 'vtex', 'pricesmart')),
     active       INTEGER NOT NULL DEFAULT 1,
     status       TEXT    NOT NULL DEFAULT 'active'
                          CHECK (status IN ('active', 'requires_attention'))
@@ -72,10 +72,11 @@ CREATE TRIGGER IF NOT EXISTS products_fts_ad AFTER DELETE ON products BEGIN
 END;
 
 INSERT OR IGNORE INTO stores (name, base_url, scraper_type) VALUES
-    ('Gollo',      'https://www.gollo.com',          'magento'),
-    ('Monge',      'https://www.tiendamonge.com',    'magento'),
-    ('Verdugo',    'https://www.verdugotienda.com',  'magento'),
-    ('Walmart CR', 'https://www.walmart.co.cr',      'vtex'),
-    ('Siman CR',   'https://cr.siman.com',           'vtex'),
-    ('Aliss CR',   'https://aliss.cr',               'magento'),
-    ('EPA CR',     'https://cr.epaenlinea.com',       'magento');
+    ('Gollo',         'https://www.gollo.com',             'magento'),
+    ('Monge',         'https://www.tiendamonge.com',       'magento'),
+    ('Verdugo',       'https://www.verdugotienda.com',     'magento'),
+    ('Walmart CR',    'https://www.walmart.co.cr',         'vtex'),
+    ('Siman CR',      'https://cr.siman.com',              'vtex'),
+    ('Aliss CR',      'https://aliss.cr',                  'magento'),
+    ('EPA CR',        'https://cr.epaenlinea.com',         'magento'),
+    ('PriceSmart CR', 'https://www.pricesmart.com',        'pricesmart');

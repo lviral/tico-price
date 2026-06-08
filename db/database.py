@@ -100,6 +100,48 @@ def init_db() -> None:
                 conn.commit()
         except sqlite3.OperationalError:
             pass  # FTS5 no disponible en esta versión de SQLite
+
+        # Migración: ampliar CHECK constraint de stores.scraper_type para incluir 'pricesmart'
+        try:
+            ps_row = conn.execute(
+                "SELECT id FROM stores WHERE name = 'PriceSmart CR'"
+            ).fetchone()
+            if ps_row is None:
+                # Intentar INSERT; si falla por CHECK constraint viejo, reconstruir tabla
+                try:
+                    conn.execute(
+                        "INSERT INTO stores (name, base_url, scraper_type) "
+                        "VALUES ('PriceSmart CR', 'https://www.pricesmart.com', 'pricesmart')"
+                    )
+                    conn.commit()
+                except sqlite3.IntegrityError:
+                    # CHECK constraint no incluye 'pricesmart' → reconstruir tabla sin constraint
+                    conn.execute("PRAGMA foreign_keys = OFF")
+                    conn.execute("""
+                        CREATE TABLE stores_new (
+                            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name         TEXT    NOT NULL UNIQUE,
+                            base_url     TEXT    NOT NULL,
+                            scraper_type TEXT    NOT NULL,
+                            active       INTEGER NOT NULL DEFAULT 1,
+                            status       TEXT    NOT NULL DEFAULT 'active'
+                                         CHECK (status IN ('active', 'requires_attention'))
+                        )
+                    """)
+                    conn.execute("INSERT INTO stores_new SELECT * FROM stores")
+                    conn.execute("DROP TABLE stores")
+                    conn.execute("ALTER TABLE stores_new RENAME TO stores")
+                    conn.execute(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS idx_stores_name ON stores(name)"
+                    )
+                    conn.execute(
+                        "INSERT OR IGNORE INTO stores (name, base_url, scraper_type) "
+                        "VALUES ('PriceSmart CR', 'https://www.pricesmart.com', 'pricesmart')"
+                    )
+                    conn.execute("PRAGMA foreign_keys = ON")
+                    conn.commit()
+        except sqlite3.OperationalError:
+            pass
     finally:
         conn.close()
 

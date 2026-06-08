@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from db.database import get_active_stores, init_db, save_product
 from scrapers.magento import MagentoScraper
+from scrapers.pricesmart import PriceSmartScraper
 from scrapers.vtex import VtexScraper
 
 log = logging.getLogger("runner")
@@ -18,6 +19,7 @@ log = logging.getLogger("runner")
 SCRAPER_MAP = {
     "magento": MagentoScraper,
     "vtex": VtexScraper,
+    "pricesmart": PriceSmartScraper,
 }
 
 # Mapeo de slugs de categoría → nombre canónico en español.
@@ -70,6 +72,11 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     # Aliss CR slugs en inglés
     "cell-phones":                "celulares",
     "computers-office":           "computacion",
+    # PriceSmart CR — slugs compuestos de nombre-CÓDIGO
+    "electronicos-e10d24":        "electronica",
+    "electrodomesticos-s20d23":   "electrodomesticos",
+    "computadoras-tablets-y-accesorios-c10d29": "computacion",
+    "linea-blanca-m10d43":        "linea-blanca",
     # Ignorados (no en allowlist)
     "electronics":                "electronica",
     "tecnologia":                 "electronica",
@@ -156,6 +163,12 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://cr.epaenlinea.com/audio-y-video.html",
         "https://cr.epaenlinea.com/celulares.html",
         "https://cr.epaenlinea.com/laptops.html",
+    ],
+    "PriceSmart CR": [
+        "https://www.pricesmart.com/es-cr/categoria/Electronicos-E10D24/E10D24",
+        "https://www.pricesmart.com/es-cr/categoria/Electrodomesticos-S20D23/S20D23",
+        "https://www.pricesmart.com/es-cr/categoria/Computadoras-tablets-y-accesorios-C10D29/C10D29",
+        "https://www.pricesmart.com/es-cr/categoria/Linea-blanca-M10D43/M10D43",
     ],
 }
 

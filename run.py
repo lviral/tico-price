@@ -27,7 +27,7 @@ def cmd_once(store_names: list[str]) -> None:
     from scrapers.runner import run_all
 
     init_db()
-    results = run_all(store_names=store_names or None)
+    results = run_all(store_names=store_names or None) or []
     errors = sum(r.errors for r in results)
     sys.exit(1 if errors else 0)
 
