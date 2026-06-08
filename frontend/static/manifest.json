@@ -1,0 +1,14 @@
+{
+  "name": "TicoPrice",
+  "short_name": "TicoPrice",
+  "description": "Historial de precios en Costa Rica — 7 tiendas, actualización 2x/día.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#2563eb",
+  "lang": "es-CR",
+  "icons": [
+    { "src": "/static/img/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "categories": ["shopping", "utilities"]
+}

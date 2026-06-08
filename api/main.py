@@ -448,6 +448,18 @@ def sitemap_xml() -> Response:
     return Response(content=xml, media_type="application/xml")
 
 
+@app.get("/sw.js", include_in_schema=False)
+def service_worker():
+    return FileResponse(FRONTEND_DIR / "static" / "js" / "sw.js",
+                        media_type="application/javascript")
+
+
+@app.get("/manifest.json", include_in_schema=False)
+def manifest_json():
+    return FileResponse(FRONTEND_DIR / "static" / "manifest.json",
+                        media_type="application/manifest+json")
+
+
 # IMPORTANTE: este catch-all debe ir al final para no interferir con las rutas de la API.
 @app.get("/{full_path:path}", include_in_schema=False)
 def spa_fallback(full_path: str) -> FileResponse:

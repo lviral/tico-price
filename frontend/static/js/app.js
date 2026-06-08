@@ -65,6 +65,41 @@ function timeAgo(iso) {
   return `hace ${Math.floor(diff / 1440)}d`;
 }
 
+// ── Theme ──────────────────────────────────────────────────────────────────
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  const btn = document.getElementById("theme-toggle");
+  if (btn) btn.textContent = theme === "dark" ? "☀️" : "🌙";
+  // Update Chart.js defaults so new charts use theme colors
+  if (window.Chart) {
+    Chart.defaults.color = theme === "dark" ? "#94a3b8" : "#64748b";
+    Chart.defaults.borderColor = theme === "dark" ? "#334155" : "rgba(0,0,0,.08)";
+  }
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved ?? (prefersDark ? "dark" : "light"));
+
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    localStorage.setItem("theme", next);
+    applyTheme(next);
+    // Re-render active chart if inflation chart is visible
+    const activePeriodBtn = document.querySelector(".period-btn.period-active");
+    if (activePeriodBtn && !document.getElementById("inflation-banner").classList.contains("hidden")) {
+      loadInflation(parseInt(activePeriodBtn.dataset.days, 10));
+    }
+  });
+
+  // Follow OS preference changes if user hasn't overridden
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+    if (!localStorage.getItem("theme")) applyTheme(e.matches ? "dark" : "light");
+  });
+}
+
 // ── Modal ──────────────────────────────────────────────────────────────────
 
 let chartInstance = null;
@@ -85,6 +120,7 @@ function openModal(product) {
   if (location.pathname !== path) {
     history.pushState({ productId: product.product_id }, "", path);
   }
+  document.getElementById("modal-full-link").href = path;
 
   // Meta tags dinámicos
   const desc = `Precio actual: ${colones(product.price)} en ${product.store}. Seguí el historial de precios de ${product.name} en TicoPrice.`;
@@ -247,6 +283,174 @@ function renderHistory(h, container) {
       },
     },
   });
+}
+
+// ── Product detail page ───────────────────────────────────────────────────
+
+function showProductDetail(productId) {
+  // Hide other views, show detail view (not as modal)
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.querySelectorAll("nav button[data-view]").forEach((b) => b.classList.remove("active"));
+  const view = document.getElementById("view-product");
+  view.classList.add("active");
+
+  const titleEl   = document.getElementById("detail-title");
+  const contentEl = document.getElementById("detail-content");
+  titleEl.textContent  = "Cargando…";
+  contentEl.innerHTML  = `<div class="spinner">Cargando historial…</div>`;
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  getHistory(productId)
+    .then((h) => {
+      titleEl.textContent = h.name;
+      renderDetailContent(h, contentEl);
+      const desc = `Precio actual: ${colones(h.current_price)} en ${h.store}. Historial de precios de ${h.name} en TicoPrice.`;
+      setMeta(`${h.name} — TicoPrice`, desc);
+      injectJsonLd({ name: h.name, in_stock: true }, h.current_price);
+    })
+    .catch((e) => {
+      titleEl.textContent = "Error";
+      contentEl.innerHTML = `<p class="empty">No se pudo cargar el producto: ${e.message}</p>`;
+    });
+}
+
+function renderDetailContent(h, container) {
+  const ofertaBadge = h.oferta_real
+    ? `<span class="badge badge-deal">Oferta real</span>` : "";
+
+  // Price history table rows (history comes newest-first from API)
+  const historyRows = (h.history || []).map((row, i, arr) => {
+    const prev = arr[i + 1];
+    let changeTd = `<td class="change-flat">—</td>`;
+    if (prev && prev.price > 0) {
+      const pct = ((row.price - prev.price) / prev.price * 100).toFixed(1);
+      if (pct > 0)
+        changeTd = `<td class="change-up">↑ +${pct}%</td>`;
+      else if (pct < 0)
+        changeTd = `<td class="change-down">↓ ${pct}%</td>`;
+      else
+        changeTd = `<td class="change-flat">Sin cambio</td>`;
+    }
+    const stock = row.in_stock
+      ? `<span class="dot dot-green"></span>`
+      : `<span class="dot dot-gray"></span>`;
+    return `<tr>
+      <td>${shortDate(row.scraped_at)}</td>
+      <td class="price-cell">${colones(row.price)}</td>
+      ${changeTd}
+      <td>${stock}</td>
+    </tr>`;
+  }).join("");
+
+  const points = [...(h.history || [])].reverse();
+  const chartHtml = points.length >= 2
+    ? `<div class="chart-wrap" style="height:260px"><canvas id="history-chart"></canvas></div>`
+    : `<p class="history-note">Solo ${h.sample_count} registro(s) — el historial crecerá con más scrapes.</p>`;
+
+  container.innerHTML = `
+    <div class="detail-store-row">
+      <span class="card-store">${esc(h.store)}</span>
+      ${ofertaBadge}
+    </div>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="val">${colones(h.current_price)}</div>
+        <div class="lbl">Precio actual</div>
+      </div>
+      <div class="stat-box">
+        <div class="val">${colones(h.price_min)}</div>
+        <div class="lbl">Mínimo 90d</div>
+      </div>
+      <div class="stat-box">
+        <div class="val">${colones(h.price_max)}</div>
+        <div class="lbl">Máximo 90d</div>
+      </div>
+      <div class="stat-box">
+        <div class="val">${colones(h.price_avg)}</div>
+        <div class="lbl">Promedio 90d</div>
+      </div>
+    </div>
+    ${chartHtml}
+    <div class="modal-cta" style="margin-bottom:1.5rem">
+      <a href="${esc(h.url)}" target="_blank" rel="noopener" class="btn-store">
+        Ver en ${esc(h.store)} →
+      </a>
+    </div>
+    ${historyRows.length ? `
+    <div class="price-history-section">
+      <h3>Historial de precios (${h.sample_count} registros)</h3>
+      <div class="table-wrap">
+        <table class="history-table">
+          <thead><tr><th>Fecha</th><th>Precio</th><th>Cambio</th><th>Stock</th></tr></thead>
+          <tbody>${historyRows}</tbody>
+        </table>
+      </div>
+    </div>` : ""}
+  `;
+
+  // Draw chart if enough points
+  if (points.length >= 2) {
+    const labels = points.map((p) => shortDate(p.scraped_at));
+    const prices = points.map((p) => p.price);
+    const avg    = h.price_avg;
+    const crFmt  = (v) => "₡" + Number(v).toLocaleString("es-CR", { maximumFractionDigits: 0 });
+    const ctx    = document.getElementById("history-chart").getContext("2d");
+    chartInstance = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Precio",
+            data: prices,
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37,99,235,.08)",
+            borderWidth: 2,
+            pointRadius: prices.length > 30 ? 2 : 4,
+            pointHoverRadius: 6,
+            tension: 0.3,
+            fill: true,
+          },
+          avg != null && {
+            label: "Promedio",
+            data: Array(prices.length).fill(Math.round(avg)),
+            borderColor: "#d97706",
+            borderDash: [5, 4],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false,
+          },
+        ].filter(Boolean),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            callbacks: { label: (c) => `  ${c.dataset.label}: ${crFmt(c.parsed.y)}` },
+          },
+        },
+        scales: {
+          x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+          y: { ticks: { callback: crFmt, font: { size: 10 } } },
+        },
+      },
+    });
+  }
+}
+
+function closeDetail() {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  removeJsonLd();
+  setMeta(DEFAULT_TITLE, DEFAULT_DESC, location.origin + "/");
+  document.getElementById("view-product").classList.remove("active");
+  // Restore products view
+  document.getElementById("view-products").classList.add("active");
+  document.querySelector('nav button[data-view="view-products"]').classList.add("active");
+  if (location.pathname.startsWith("/producto/")) history.pushState({}, "", "/");
 }
 
 // ── Products view ──────────────────────────────────────────────────────────
@@ -733,6 +937,9 @@ function initModal() {
     if (e.key === "Escape") closeModal();
   });
 
+  // Back button on product detail page
+  document.getElementById("back-btn").addEventListener("click", closeDetail);
+
   // Botón compartir: copia la URL al portapapeles
   document.getElementById("modal-share").addEventListener("click", () => {
     const label = document.getElementById("share-label");
@@ -755,9 +962,19 @@ function initModal() {
   window.addEventListener("popstate", () => {
     const match = location.pathname.match(/^\/producto\/(\d+)$/);
     if (match) {
-      openModalById(parseInt(match[1], 10));
+      // Check if we came from detail page or modal
+      const detailView = document.getElementById("view-product");
+      if (detailView.classList.contains("active")) {
+        showProductDetail(parseInt(match[1], 10));
+      } else {
+        openModalById(parseInt(match[1], 10));
+      }
     } else {
+      // Close whatever is open
       document.getElementById("modal-overlay").classList.remove("open");
+      if (document.getElementById("view-product").classList.contains("active")) {
+        closeDetail();
+      }
       if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
       removeJsonLd();
       setMeta(DEFAULT_TITLE, DEFAULT_DESC);
@@ -768,6 +985,7 @@ function initModal() {
 // ── Boot ───────────────────────────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   initTabs();
   initModal();
   initSearch();
@@ -775,7 +993,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateFavBadge();
   loadInflation(7);
 
-  // Deep link: si la URL es /producto/{id}, abrir modal directo
+  // Deep link: si la URL es /producto/{id}, mostrar página de detalle
   const deepLink = location.pathname.match(/^\/producto\/(\d+)$/);
-  if (deepLink) openModalById(parseInt(deepLink[1], 10));
+  if (deepLink) showProductDetail(parseInt(deepLink[1], 10));
 });
