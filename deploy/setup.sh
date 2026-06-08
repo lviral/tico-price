@@ -50,7 +50,7 @@ if [ -d "$APP_DIR/.git" ]; then
     echo "  Repo ya existe, haciendo pull..."
     cd "$APP_DIR" && sudo -u "$APP_USER" git pull
 else
-    git clone https://github.com/TU_USUARIO/precio-tracker-cr "$APP_DIR"
+    git clone https://github.com/lviral/tico-price "$APP_DIR"
     chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 fi
 
