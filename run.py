@@ -37,10 +37,10 @@ def cmd_schedule() -> None:
     start()
 
 
-def cmd_api(host: str, port: int, reload: bool) -> None:
+def cmd_api(host: str, port: int, reload: bool, workers: int) -> None:
     _setup_console_logging()
     import uvicorn
-    uvicorn.run("api.main:app", host=host, port=port, reload=reload)
+    uvicorn.run("api.main:app", host=host, port=port, reload=reload, workers=workers)
 
 
 def main() -> None:
@@ -85,6 +85,11 @@ Ejemplos:
         "--reload", action="store_true",
         help="Hot-reload para la API (solo desarrollo).",
     )
+    parser.add_argument(
+        "--workers", type=int, default=1,
+        help="Número de workers uvicorn (default: 1). En prod usar 2. "
+             "Incompatible con --reload.",
+    )
 
     args = parser.parse_args()
 
@@ -93,7 +98,7 @@ Ejemplos:
     elif args.schedule:
         cmd_schedule()
     elif args.api:
-        cmd_api(args.host, args.port, args.reload)
+        cmd_api(args.host, args.port, args.reload, args.workers)
 
 
 if __name__ == "__main__":

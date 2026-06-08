@@ -9,7 +9,7 @@ User=preciotracker
 WorkingDirectory=/opt/precio-tracker
 Environment="SITE_URL=https://TU_DOMINIO"
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=/opt/precio-tracker/.venv/bin/python run.py --api --port 8000
+ExecStart=/opt/precio-tracker/.venv/bin/python run.py --api --port 8000 --host 127.0.0.1 --workers 2
 Restart=always
 RestartSec=5
 

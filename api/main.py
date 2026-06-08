@@ -511,6 +511,25 @@ def manifest_json():
                         media_type="application/manifest+json")
 
 
+@app.get("/health", include_in_schema=False)
+def health() -> Response:
+    """Health check para monitoreo externo (UptimeRobot, load balancers, etc.)."""
+    try:
+        from db.database import get_db
+        with get_db() as conn:
+            conn.execute("SELECT 1").fetchone()
+        body = {"status": "ok", "db": "ok"}
+        code = 200
+    except Exception as exc:
+        body = {"status": "degraded", "db": str(exc)}
+        code = 503
+    return Response(
+        content=json.dumps(body),
+        status_code=code,
+        media_type="application/json",
+    )
+
+
 @app.get("/version", include_in_schema=False)
 def static_version() -> dict:
     """Retorna un hash corto basado en el contenido de los archivos estáticos.
