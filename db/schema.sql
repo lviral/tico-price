@@ -79,4 +79,5 @@ INSERT OR IGNORE INTO stores (name, base_url, scraper_type) VALUES
     ('Siman CR',      'https://cr.siman.com',              'vtex'),
     ('Aliss CR',      'https://aliss.cr',                  'magento'),
     ('EPA CR',        'https://cr.epaenlinea.com',         'magento'),
-    ('PriceSmart CR', 'https://www.pricesmart.com',        'pricesmart');
+    ('PriceSmart CR', 'https://www.pricesmart.com',        'pricesmart'),
+    ('RadioShack CR', 'https://www.radioshack.cr',         'magento');

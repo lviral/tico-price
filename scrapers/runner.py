@@ -72,6 +72,11 @@ CATEGORY_NORMALIZE: dict[str, str] = {
     # Aliss CR slugs en inglés
     "cell-phones":                "celulares",
     "computers-office":           "computacion",
+    # RadioShack CR — usa /c/slug
+    "video":                      "televisores",
+    "telefonia":                  "celulares",
+    "mundo-gamer":                "videojuegos",
+    "hogar-y-oficina":            "electrodomesticos",
     # PriceSmart CR — slugs compuestos de nombre-CÓDIGO
     "electronicos-e10d24":        "electronica",
     "electrodomesticos-s20d23":   "electrodomesticos",
@@ -163,6 +168,13 @@ STORE_CATEGORIES: dict[str, list[str]] = {
         "https://cr.epaenlinea.com/audio-y-video.html",
         "https://cr.epaenlinea.com/celulares.html",
         "https://cr.epaenlinea.com/laptops.html",
+    ],
+    "RadioShack CR": [
+        "https://www.radioshack.cr/c/video",
+        "https://www.radioshack.cr/c/telefonia",
+        "https://www.radioshack.cr/c/computacion",
+        "https://www.radioshack.cr/c/audio",
+        "https://www.radioshack.cr/c/mundo-gamer",
     ],
     "PriceSmart CR": [
         "https://www.pricesmart.com/es-cr/categoria/Electronicos-E10D24/E10D24",

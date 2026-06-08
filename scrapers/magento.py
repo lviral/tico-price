@@ -122,6 +122,14 @@ class MagentoScraper:
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=_NAV_TIMEOUT_MS)
             page.wait_for_selector(_WAIT_SELECTOR, timeout=_WAIT_TIMEOUT_MS)
+            # Secondary wait: ensure price attrs are populated (needed for KO-based Magento themes)
+            try:
+                page.wait_for_selector(
+                    ".price-wrapper[data-price-type='finalPrice']:not([data-price-amount=''])",
+                    timeout=5_000,
+                )
+            except PWTimeout:
+                pass  # Store may use CSS prices or have no discounts visible
         except PWTimeout:
             log.warning("Timeout cargando página %d (%s) — se omite", page_num, url)
             return [], None

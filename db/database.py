@@ -142,6 +142,24 @@ def init_db() -> None:
                     conn.commit()
         except sqlite3.OperationalError:
             pass
+
+        # Migración: insertar tiendas nuevas (no necesita CHECK fix — ya se hizo arriba)
+        for name, base_url, scraper_type in [
+            ("RadioShack CR", "https://www.radioshack.cr", "magento"),
+        ]:
+            try:
+                row = conn.execute(
+                    "SELECT id FROM stores WHERE name = ?", (name,)
+                ).fetchone()
+                if row is None:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO stores (name, base_url, scraper_type) "
+                        "VALUES (?, ?, ?)",
+                        (name, base_url, scraper_type),
+                    )
+                    conn.commit()
+            except sqlite3.OperationalError:
+                pass
     finally:
         conn.close()
 
