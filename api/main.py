@@ -7,7 +7,10 @@ Iniciar:
 from __future__ import annotations
 
 import hashlib
+import html as _html
+import json
 import os
+import re
 from pathlib import Path
 from typing import Annotated
 
@@ -526,8 +529,140 @@ def static_version() -> dict:
     return {"version": h.hexdigest()[:12]}
 
 
+# ---------------------------------------------------------------------------
+# SSR para crawlers sociales — /producto/{id}
+# ---------------------------------------------------------------------------
+
+_INDEX_TEMPLATE: str | None = None
+
+
+def _index_template() -> str:
+    global _INDEX_TEMPLATE
+    if _INDEX_TEMPLATE is None:
+        _INDEX_TEMPLATE = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    return _INDEX_TEMPLATE
+
+
+def _replace_meta(template: str, replacements: dict[str, str]) -> str:
+    """Reemplaza el content de meta tags y el texto del <title> usando regex."""
+    result = template
+    for key, value in replacements.items():
+        if key == "__title__":
+            result = re.sub(r"(<title>)[^<]*(</title>)", rf"\g<1>{value}\2", result)
+            continue
+        # <meta name/property="KEY" ... content="OLD"> (atributos en cualquier orden)
+        result = re.sub(
+            rf'(<meta\b[^>]*(?:name|property)="{re.escape(key)}"[^>]*\bcontent=")[^"]*(")',
+            rf"\g<1>{value}\2",
+            result,
+        )
+        # orden inverso: content primero, luego name/property
+        result = re.sub(
+            rf'(<meta\b[^>]*\bcontent=")[^"]*("[^>]*(?:name|property)="{re.escape(key)}")',
+            rf"\g<1>{value}\2",
+            result,
+        )
+    return result
+
+
+def _ssr_product(product_id: int) -> str | None:
+    """Genera el HTML completo con og: tags del producto para crawlers sociales.
+
+    Retorna None si el producto no existe en la DB.
+    """
+    from db.database import get_db
+
+    with get_db() as conn:
+        row = conn.execute(
+            """SELECT p.id, p.name, p.image_url, p.category,
+                      s.name AS store_name,
+                      (SELECT price FROM price_history
+                       WHERE product_id = p.id
+                       ORDER BY scraped_at DESC, id DESC LIMIT 1) AS current_price
+               FROM products p
+               JOIN stores s ON s.id = p.store_id
+               WHERE p.id = ?""",
+            (product_id,),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    name      = row["name"] or ""
+    store     = row["store_name"] or ""
+    price     = row["current_price"]
+    image_url = row["image_url"]
+
+    price_str = f"₡{int(price):,}".replace(",", ".") if price else ""
+    desc = (
+        f"Precio actual: {price_str} en {store}. "
+        f"Seguí el historial de precios de {name} en TicoPrice."
+        if price_str else
+        f"Historial de precios de {name} en {store} — TicoPrice."
+    )
+    canonical = f"{SITE_URL}/producto/{product_id}"
+    og_image  = image_url or f"{SITE_URL}/static/img/og.png"
+
+    def q(s: str) -> str:
+        return _html.escape(s, quote=True)
+
+    result = _replace_meta(
+        _index_template(),
+        {
+            "__title__":           q(f"{name} — TicoPrice"),
+            "description":         q(desc),
+            "og:title":            q(f"{name} — TicoPrice"),
+            "og:description":      q(desc),
+            "og:url":              q(canonical),
+            "og:image":            q(og_image),
+            "twitter:title":       q(f"{name} — TicoPrice"),
+            "twitter:description": q(desc),
+            "twitter:image":       q(og_image),
+        },
+    )
+
+    # Cuando usamos la imagen del producto las dimensiones 1200x630 son incorrectas
+    if image_url:
+        result = re.sub(r'\s*<meta property="og:image:(?:width|height|type)"[^\n]*\n?', "\n", result)
+
+    # Canonical link + JSON-LD estructurado para Google rich snippets
+    jsonld = json.dumps(
+        {
+            "@context": "https://schema.org/",
+            "@type": "Product",
+            "name": name,
+            "offers": {
+                "@type": "Offer",
+                "price": price,
+                "priceCurrency": "CRC",
+                "availability": "https://schema.org/InStock",
+                "url": canonical,
+            },
+        },
+        ensure_ascii=False,
+    )
+    result = result.replace(
+        "</head>",
+        f'  <link rel="canonical" href="{q(canonical)}">\n'
+        f'  <script type="application/ld+json">{jsonld}</script>\n'
+        f"</head>",
+        1,
+    )
+
+    return result
+
+
 # IMPORTANTE: este catch-all debe ir al final para no interferir con las rutas de la API.
-@app.get("/{full_path:path}", include_in_schema=False)
-def spa_fallback(full_path: str) -> FileResponse:
-    """Sirve index.html para cualquier ruta no-API (SPA con History API routing)."""
+@app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+def spa_fallback(full_path: str) -> Response | FileResponse:
+    """Sirve index.html para rutas no-API.
+
+    Para /producto/{id} inyecta og: tags con datos reales del producto,
+    permitiendo previews correctos en WhatsApp, Twitter, Facebook, etc.
+    """
+    match = re.match(r"^producto/(\d+)$", full_path)
+    if match:
+        rendered = _ssr_product(int(match.group(1)))
+        if rendered:
+            return Response(content=rendered, media_type="text/html; charset=utf-8")
     return FileResponse(FRONTEND_DIR / "index.html")
