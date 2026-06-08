@@ -10,12 +10,27 @@ TU_DOMINIO {
         }
     }
 
-    # Seguridad básica
+    # Seguridad básica (se aplica a todas las rutas salvo las que la sobreescriben abajo)
     header {
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
         Referrer-Policy strict-origin-when-cross-origin
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'"
+        Permissions-Policy "geolocation=(), camera=(), microphone=()"
     }
+
+    # sw.js nunca se cachea: el browser siempre lo re-fetcha para detectar actualizaciones
+    @sw path /sw.js
+    header @sw Cache-Control "no-store"
+
+    # Assets estáticos con hash implícito en el contenido (CSS, JS, imágenes)
+    # 1 hora es seguro porque el SW los cachea; Caddy solo sirve a usuarios sin SW
+    @static path /static/*
+    header @static Cache-Control "public, max-age=3600"
+
+    # manifest.json: puede cambiar cuando se actualiza el nombre/ícono de la PWA
+    @manifest path /manifest.json
+    header @manifest Cache-Control "public, max-age=3600"
 
     # Comprimir respuestas
     encode gzip

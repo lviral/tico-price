@@ -6,18 +6,24 @@ Iniciar:
 
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8000").rstrip("/")
+
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 from db.database import (
     get_categories,
@@ -40,12 +46,45 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# Cache-Control middleware
+# Scrapers corren 2x/día → datos frescos cada ~12h.
+# Endpoints lentos (full-scan + subconsultas) se cachean agresivamente.
+# ---------------------------------------------------------------------------
+
+_CACHE_RULES: dict[str, str] = {
+    "/categories": "public, max-age=3600, stale-while-revalidate=7200",
+    "/stores":     "public, max-age=3600, stale-while-revalidate=7200",
+    "/version":    "public, max-age=60",
+}
+_CACHE_DEFAULT_API = "public, max-age=300, stale-while-revalidate=600"
+
+
+@app.middleware("http")
+async def cache_control(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+
+    # No tocar respuestas de error ni archivos estáticos (Caddy los maneja)
+    if response.status_code >= 400 or path.startswith("/static/"):
+        return response
+
+    if path in _CACHE_RULES:
+        response.headers["Cache-Control"] = _CACHE_RULES[path]
+    elif any(path.startswith(p) for p in ("/products", "/deals", "/trending", "/inflation")):
+        response.headers["Cache-Control"] = _CACHE_DEFAULT_API
+
+    return response
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 
@@ -176,7 +215,9 @@ class StoreSummary(BaseModel):
         "Si `q` está vacío devuelve todos los productos (hasta 200)."
     ),
 )
+@limiter.limit("30/minute")
 def list_products(
+    request: Request,
     q: Annotated[str, Query(description="Texto a buscar en el nombre")] = "",
     category: Annotated[str | None, Query(description="Filtrar por categoría")] = None,
     store: Annotated[str | None, Query(description="Filtrar por nombre de tienda")] = None,
@@ -214,7 +255,8 @@ def list_products(
         "inferior al promedio histórico, indicando una baja genuina de precio."
     ),
 )
-def product_history(product_id: int) -> ProductHistory:
+@limiter.limit("60/minute")
+def product_history(request: Request, product_id: int) -> ProductHistory:
     stats_row = get_product_with_stats(product_id, days=90)
     if stats_row is None:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
@@ -268,7 +310,9 @@ def product_history(product_id: int) -> ProductHistory:
         "Solo incluye productos con ≥ 3 registros históricos para evitar falsos positivos."
     ),
 )
+@limiter.limit("20/minute")
 def deals(
+    request: Request,
     limit: Annotated[int, Query(ge=1, le=200, description="Máximo de resultados")] = 50,
 ) -> list[DealItem]:
     rows = get_deals(limit=limit)
@@ -301,7 +345,9 @@ def deals(
         "en ambos extremos del período."
     ),
 )
+@limiter.limit("20/minute")
 def trending(
+    request: Request,
     days: Annotated[int, Query(ge=1, le=90, description="Ventana de días a comparar")] = 7,
     limit: Annotated[int, Query(ge=1, le=200, description="Máximo de resultados")] = 50,
 ) -> list[ProductSummary]:
@@ -347,7 +393,9 @@ def categories_list() -> list[str]:
         "Incluye desglose por categoría y tendencia semanal de las últimas 12 semanas."
     ),
 )
+@limiter.limit("20/minute")
 def inflation(
+    request: Request,
     days: Annotated[int, Query(ge=7, le=365, description="Ventana de comparación en días")] = 30,
 ) -> InflationIndex:
     data = get_inflation_index(days=days)
@@ -458,6 +506,24 @@ def service_worker():
 def manifest_json():
     return FileResponse(FRONTEND_DIR / "static" / "manifest.json",
                         media_type="application/manifest+json")
+
+
+@app.get("/version", include_in_schema=False)
+def static_version() -> dict:
+    """Retorna un hash corto basado en el contenido de los archivos estáticos.
+
+    El Service Worker lo usa como clave de caché: cuando se despliega una nueva
+    versión los archivos cambian → el hash cambia → el SW invalida el caché viejo.
+    """
+    static_dir = FRONTEND_DIR / "static"
+    h = hashlib.sha1(usedforsecurity=False)
+    for f in sorted(static_dir.rglob("*")):
+        if f.is_file():
+            stat = f.stat()
+            h.update(f.name.encode())
+            h.update(stat.st_mtime_ns.to_bytes(8, "little"))
+            h.update(stat.st_size.to_bytes(8, "little"))
+    return {"version": h.hexdigest()[:12]}
 
 
 # IMPORTANTE: este catch-all debe ir al final para no interferir con las rutas de la API.
