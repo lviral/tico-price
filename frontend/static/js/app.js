@@ -135,10 +135,31 @@ function closeModal() {
   }
 }
 
+function shortDate(iso) {
+  const d = new Date(iso.slice(0, 10) + "T12:00:00Z");
+  return d.toLocaleDateString("es-CR", { day: "numeric", month: "short" });
+}
+
 function renderHistory(h, container) {
   const ofertaBadge = h.oferta_real
     ? `<span class="badge badge-deal">Oferta real</span>`
     : "";
+
+  // Variación vs precio más antiguo del período
+  const points = [...h.history].reverse();
+  let trendBadge = "";
+  if (points.length >= 2) {
+    const oldest = points[0].price;
+    const newest = points[points.length - 1].price;
+    if (oldest > 0) {
+      const pct = ((newest - oldest) / oldest * 100).toFixed(1);
+      trendBadge = pct > 0
+        ? `<span class="badge badge-up">↑ +${pct}% en 90d</span>`
+        : pct < 0
+          ? `<span class="badge badge-down">↓ ${pct}% en 90d</span>`
+          : "";
+    }
+  }
 
   container.innerHTML = `
     <div class="stats-row">
@@ -159,18 +180,25 @@ function renderHistory(h, container) {
         <div class="lbl">Promedio 90d</div>
       </div>
     </div>
-    <div class="chart-wrap"><canvas id="history-chart"></canvas></div>
-    ${h.sample_count < 3 ? `<p style="margin-top:.75rem;font-size:.8rem;color:var(--text-muted)">
-      Solo ${h.sample_count} registro(s). Los datos mejorarán con más scrapes.</p>` : ""}
+    ${points.length >= 2 ? `<div class="chart-wrap"><canvas id="history-chart"></canvas></div>` : ""}
+    ${h.sample_count < 3 ? `<p class="history-note">
+      Solo ${h.sample_count} registro(s) disponibles. ${trendBadge} El historial crecerá con más scrapes.</p>` : ""}
+    <div class="modal-cta">
+      <a href="${esc(h.url)}" target="_blank" rel="noopener" class="btn-store">
+        Ver en ${esc(h.store)} →
+      </a>
+    </div>
   `;
 
-  const points = [...h.history].reverse();
-  if (!points.length) return;
+  if (!points.length || points.length < 2) return;
 
-  const labels = points.map((p) => p.scraped_at.slice(0, 10));
+  const labels = points.map((p) => shortDate(p.scraped_at));
   const prices = points.map((p) => p.price);
+  const avg    = h.price_avg;
 
-  const avg = h.price_avg;
+  const crFormat = (v) =>
+    "₡" + Number(v).toLocaleString("es-CR", { maximumFractionDigits: 0 });
+
   const ctx = document.getElementById("history-chart").getContext("2d");
   chartInstance = new Chart(ctx, {
     type: "line",
@@ -184,6 +212,7 @@ function renderHistory(h, container) {
           backgroundColor: "rgba(37,99,235,.08)",
           borderWidth: 2,
           pointRadius: prices.length > 30 ? 2 : 4,
+          pointHoverRadius: 6,
           tension: 0.3,
           fill: true,
         },
@@ -201,14 +230,19 @@ function renderHistory(h, container) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { boxWidth: 12, font: { size: 11 } } } },
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `  ${ctx.dataset.label}: ${crFormat(ctx.parsed.y)}`,
+          },
+        },
+      },
       scales: {
         x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
         y: {
-          ticks: {
-            callback: (v) => "₡" + Number(v).toLocaleString("es-CR", { maximumFractionDigits: 0 }),
-            font: { size: 10 },
-          },
+          ticks: { callback: crFormat, font: { size: 10 } },
         },
       },
     },

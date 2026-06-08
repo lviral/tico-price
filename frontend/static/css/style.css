@@ -459,7 +459,36 @@ tr:hover td { background: #f8fafc; }
 .stat-box .val { font-size: 1.1rem; font-weight: 700; }
 .stat-box .lbl { font-size: .72rem; color: var(--text-muted); margin-top: .1rem; }
 
-.chart-wrap { position: relative; height: 240px; }
+.chart-wrap { position: relative; height: 240px; margin-bottom: 1rem; }
+
+.history-note {
+  margin: .5rem 0 1rem;
+  font-size: .8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+.modal-cta {
+  padding: .75rem 0 .25rem;
+  border-top: 1px solid var(--border);
+  margin-top: .5rem;
+}
+
+.btn-store {
+  display: inline-block;
+  padding: .5rem 1.1rem;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 6px;
+  font-size: .85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s;
+}
+.btn-store:hover { background: #1d4ed8; }
 
 /* ── Inflation banner ─────────────────────────────────── */
 .inflation-banner {
