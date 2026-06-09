@@ -84,7 +84,15 @@
       <button class="pill pill-active" data-cat="" aria-pressed="true">Todas</button>
     </div>
 
-    <!-- Banner de inflación -->
+    <!-- Vista por defecto: trending -->
+    <div id="trending-section">
+      <h2 class="section-heading">
+        <span class="heading-icon" aria-hidden="true">📈</span> Más aumentaron esta semana
+      </h2>
+      <div id="trending-grid" class="products-grid"></div>
+    </div>
+
+    <!-- Banner de inflación (carga async, aparece debajo del trending) -->
     <div id="inflation-banner" class="inflation-banner hidden">
       <div class="inflation-header">
         <span class="inflation-title">📊 Variación de precios</span>
@@ -98,14 +106,6 @@
       <div class="inflation-chart-wrap">
         <canvas id="inflation-chart"></canvas>
       </div>
-    </div>
-
-    <!-- Vista por defecto: trending -->
-    <div id="trending-section">
-      <h2 class="section-heading">
-        <span class="heading-icon" aria-hidden="true">📈</span> Más aumentaron esta semana
-      </h2>
-      <div id="trending-grid" class="products-grid"></div>
     </div>
 
     <!-- Resultados de búsqueda -->
