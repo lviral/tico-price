@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS price_history (
 
 CREATE INDEX IF NOT EXISTS idx_price_history_product_id ON price_history(product_id);
 CREATE INDEX IF NOT EXISTS idx_price_history_scraped_at  ON price_history(scraped_at);
+CREATE INDEX IF NOT EXISTS idx_ph_product_date ON price_history(product_id, scraped_at);
 CREATE INDEX IF NOT EXISTS idx_products_store_id         ON products(store_id);
 
 -- FTS5: búsqueda de texto completo en nombres de productos.
