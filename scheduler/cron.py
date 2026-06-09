@@ -18,6 +18,7 @@ from pathlib import Path
 import schedule
 
 from db.database import (
+    checkpoint_wal,
     get_active_stores,
     get_consecutive_failures,
     init_db,
@@ -142,6 +143,7 @@ def scrape_job() -> None:
     for store in stores:
         _run_one_store(store)
 
+    checkpoint_wal()
     log.info("Job de scraping completado  %s", datetime.now().strftime("%Y-%m-%d %H:%M"))
 
 

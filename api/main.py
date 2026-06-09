@@ -9,10 +9,13 @@ from __future__ import annotations
 import hashlib
 import html as _html
 import json
+import logging
 import os
 import re
 from pathlib import Path
 from typing import Annotated
+
+log = logging.getLogger(__name__)
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -525,7 +528,8 @@ def health() -> Response:
         body = {"status": "ok", "db": "ok"}
         code = 200
     except Exception as exc:
-        body = {"status": "degraded", "db": str(exc)}
+        log.warning("Health check DB failure: %s", exc)
+        body = {"status": "degraded", "db": "error"}
         code = 503
     return Response(
         content=json.dumps(body),

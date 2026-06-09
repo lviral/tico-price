@@ -252,6 +252,24 @@ def save_product(store_id: int, data: dict) -> tuple[int, bool]:
 # Lectura
 # ---------------------------------------------------------------------------
 
+def checkpoint_wal() -> None:
+    """Fuerza un WAL checkpoint TRUNCATE para mantener el archivo WAL pequeño.
+
+    Llamar después de cada job de scraping. Sin checkpoint el WAL crece
+    indefinidamente hasta que SQLite lo compacta internamente (>1000 páginas),
+    lo que puede afectar tiempos de lectura en tablas grandes.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.close()
+        log.debug("WAL checkpoint completado")
+    except Exception:
+        log.warning("WAL checkpoint falló", exc_info=True)
+
+
+# ---------------------------------------------------------------------------
+
 def record_scrape_run(
     store_id: int,
     started_at: str,
