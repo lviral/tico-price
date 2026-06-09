@@ -1,8 +1,11 @@
+import logging
 import re
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
+
+log = logging.getLogger(__name__)
 
 DB_PATH = Path(__file__).parent / "prices.db"
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
@@ -99,7 +102,7 @@ def init_db() -> None:
                 )
                 conn.commit()
         except sqlite3.OperationalError:
-            pass  # FTS5 no disponible en esta versión de SQLite
+            log.warning("FTS5 no disponible en esta versión de SQLite — búsqueda por texto desactivada", exc_info=True)
 
         # Migración: ampliar CHECK constraint de stores.scraper_type para incluir 'pricesmart'
         try:
@@ -440,7 +443,7 @@ def search_products(
             with get_db() as conn:
                 return conn.execute(sql, params).fetchall()
         except sqlite3.OperationalError:
-            pass  # FTS5 no disponible — caer en LIKE
+            log.warning("FTS5 falló al ejecutar la búsqueda — usando fallback LIKE", exc_info=True)
 
         # Fallback LIKE si FTS5 falla
         extra_conds.insert(0, "p.name LIKE ?")

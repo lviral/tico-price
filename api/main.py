@@ -52,9 +52,10 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+_cors_origins = ["*"] if "localhost" in SITE_URL else [SITE_URL]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["GET"],
     allow_headers=["*"],
 )

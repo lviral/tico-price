@@ -133,7 +133,6 @@ def scrape_job() -> None:
     log.info("Job de scraping iniciado  %s", datetime.now().strftime("%Y-%m-%d %H:%M"))
     log.info("═" * 55)
 
-    init_db()
     stores = get_active_stores()
 
     if not stores:

@@ -104,6 +104,50 @@ function initTheme() {
 
 let chartInstance = null;
 
+// Mapa id→producto: evita JSON embebido en atributos del DOM
+const _productMap = new Map();
+
+// Set de favoritos cacheado antes de cada render batch (evita N lecturas de localStorage)
+let _favIds = new Set();
+function _refreshFavCache() {
+  _favIds = new Set(getFavorites().map((f) => f.product_id));
+}
+
+// Valida que una URL tenga protocolo http/https antes de usarla en href
+function safeHref(url) {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "https:" || protocol === "http:" ? url : "#";
+  } catch {
+    return "#";
+  }
+}
+
+// ── Focus trap para modal de accesibilidad ─────────────────────────────────
+let _trapHandler = null;
+
+function enableFocusTrap(container) {
+  const sel = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const els = () => Array.from(container.querySelectorAll(sel));
+  _trapHandler = (e) => {
+    if (e.key !== "Tab") return;
+    const focusable = els();
+    if (!focusable.length) return;
+    const idx = focusable.indexOf(document.activeElement);
+    if (e.shiftKey) {
+      if (idx <= 0) { e.preventDefault(); focusable[focusable.length - 1].focus(); }
+    } else {
+      if (idx === focusable.length - 1) { e.preventDefault(); focusable[0].focus(); }
+    }
+  };
+  container.addEventListener("keydown", _trapHandler);
+  els()[0]?.focus();
+}
+
+function disableFocusTrap(container) {
+  if (_trapHandler) { container.removeEventListener("keydown", _trapHandler); _trapHandler = null; }
+}
+
 function openModal(product) {
   const overlay = document.getElementById("modal-overlay");
   const title   = document.getElementById("modal-title");
@@ -114,6 +158,7 @@ function openModal(product) {
   store.textContent = product.store;
   body.innerHTML    = `<div class="spinner">Cargando historial…</div>`;
   overlay.classList.add("open");
+  enableFocusTrap(overlay.querySelector(".modal"));
 
   // History API routing — URL real e indexable
   const path = `/producto/${product.product_id}`;
@@ -161,7 +206,9 @@ async function openModalById(productId) {
 }
 
 function closeModal() {
-  document.getElementById("modal-overlay").classList.remove("open");
+  const overlay = document.getElementById("modal-overlay");
+  disableFocusTrap(overlay.querySelector(".modal"));
+  overlay.classList.remove("open");
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
   removeJsonLd();
   setMeta(DEFAULT_TITLE, DEFAULT_DESC, location.origin + "/");
@@ -169,6 +216,56 @@ function closeModal() {
   if (location.pathname.startsWith("/producto/")) {
     history.pushState({}, "", "/");
   }
+}
+
+// ── Gráfico de historial de precios (compartido por modal y página de detalle) ──
+
+function renderPriceChart(canvasId, points, avg) {
+  const labels  = points.map((p) => shortDate(p.scraped_at));
+  const prices  = points.map((p) => p.price);
+  const crFmt   = (v) => "₡" + Number(v).toLocaleString("es-CR", { maximumFractionDigits: 0 });
+  const ctx     = document.getElementById(canvasId).getContext("2d");
+  return new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Precio",
+          data: prices,
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,.08)",
+          borderWidth: 2,
+          pointRadius: prices.length > 30 ? 2 : 4,
+          pointHoverRadius: 6,
+          tension: 0.3,
+          fill: true,
+        },
+        avg != null && {
+          label: "Promedio",
+          data: Array(prices.length).fill(Math.round(avg)),
+          borderColor: "#d97706",
+          borderDash: [5, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+      ].filter(Boolean),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: (c) => `  ${c.dataset.label}: ${crFmt(c.parsed.y)}` } },
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        y: { ticks: { callback: crFmt, font: { size: 10 } } },
+      },
+    },
+  });
 }
 
 function shortDate(iso) {
@@ -220,69 +317,13 @@ function renderHistory(h, container) {
     ${h.sample_count < 3 ? `<p class="history-note">
       Solo ${h.sample_count} registro(s) disponibles. ${trendBadge} El historial crecerá con más scrapes.</p>` : ""}
     <div class="modal-cta">
-      <a href="${esc(h.url)}" target="_blank" rel="noopener" class="btn-store">
+      <a href="${safeHref(h.url)}" target="_blank" rel="noopener" class="btn-store">
         Ver en ${esc(h.store)} →
       </a>
     </div>
   `;
 
-  if (!points.length || points.length < 2) return;
-
-  const labels = points.map((p) => shortDate(p.scraped_at));
-  const prices = points.map((p) => p.price);
-  const avg    = h.price_avg;
-
-  const crFormat = (v) =>
-    "₡" + Number(v).toLocaleString("es-CR", { maximumFractionDigits: 0 });
-
-  const ctx = document.getElementById("history-chart").getContext("2d");
-  chartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Precio",
-          data: prices,
-          borderColor: "#2563eb",
-          backgroundColor: "rgba(37,99,235,.08)",
-          borderWidth: 2,
-          pointRadius: prices.length > 30 ? 2 : 4,
-          pointHoverRadius: 6,
-          tension: 0.3,
-          fill: true,
-        },
-        avg != null && {
-          label: "Promedio",
-          data: Array(prices.length).fill(Math.round(avg)),
-          borderColor: "#d97706",
-          borderDash: [5, 4],
-          borderWidth: 1.5,
-          pointRadius: 0,
-          fill: false,
-        },
-      ].filter(Boolean),
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: {
-        legend: { labels: { boxWidth: 12, font: { size: 11 } } },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `  ${ctx.dataset.label}: ${crFormat(ctx.parsed.y)}`,
-          },
-        },
-      },
-      scales: {
-        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-        y: {
-          ticks: { callback: crFormat, font: { size: 10 } },
-        },
-      },
-    },
-  });
+  if (points.length >= 2) chartInstance = renderPriceChart("history-chart", points, h.price_avg);
 }
 
 // ── Product detail page ───────────────────────────────────────────────────
@@ -373,7 +414,7 @@ function renderDetailContent(h, container) {
     </div>
     ${chartHtml}
     <div class="modal-cta" style="margin-bottom:1.5rem">
-      <a href="${esc(h.url)}" target="_blank" rel="noopener" class="btn-store">
+      <a href="${safeHref(h.url)}" target="_blank" rel="noopener" class="btn-store">
         Ver en ${esc(h.store)} →
       </a>
     </div>
@@ -389,57 +430,7 @@ function renderDetailContent(h, container) {
     </div>` : ""}
   `;
 
-  // Draw chart if enough points
-  if (points.length >= 2) {
-    const labels = points.map((p) => shortDate(p.scraped_at));
-    const prices = points.map((p) => p.price);
-    const avg    = h.price_avg;
-    const crFmt  = (v) => "₡" + Number(v).toLocaleString("es-CR", { maximumFractionDigits: 0 });
-    const ctx    = document.getElementById("history-chart").getContext("2d");
-    chartInstance = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "Precio",
-            data: prices,
-            borderColor: "#2563eb",
-            backgroundColor: "rgba(37,99,235,.08)",
-            borderWidth: 2,
-            pointRadius: prices.length > 30 ? 2 : 4,
-            pointHoverRadius: 6,
-            tension: 0.3,
-            fill: true,
-          },
-          avg != null && {
-            label: "Promedio",
-            data: Array(prices.length).fill(Math.round(avg)),
-            borderColor: "#d97706",
-            borderDash: [5, 4],
-            borderWidth: 1.5,
-            pointRadius: 0,
-            fill: false,
-          },
-        ].filter(Boolean),
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: { labels: { boxWidth: 12, font: { size: 11 } } },
-          tooltip: {
-            callbacks: { label: (c) => `  ${c.dataset.label}: ${crFmt(c.parsed.y)}` },
-          },
-        },
-        scales: {
-          x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-          y: { ticks: { callback: crFmt, font: { size: 10 } } },
-        },
-      },
-    });
-  }
+  if (points.length >= 2) chartInstance = renderPriceChart("history-chart", points, h.price_avg);
 }
 
 function closeDetail() {
@@ -466,6 +457,7 @@ function variationBadge(pct) {
 }
 
 function productCard(p) {
+  _productMap.set(p.product_id, p);
   const discount   = p.discount_pct
     ? `<span class="badge badge-discount">${Math.round(p.discount_pct)}% off</span>`
     : "";
@@ -476,7 +468,7 @@ function productCard(p) {
   const stock = p.in_stock
     ? `<span class="dot dot-green"></span> En stock`
     : `<span class="dot dot-gray"></span> Agotado`;
-  const fav = isFavorite(p.product_id);
+  const fav = _favIds.has(p.product_id);
 
   const CAT_ICON = {
     "celulares": "📱", "televisores": "📺", "audio": "🔊",
@@ -500,7 +492,7 @@ function productCard(p) {
   }
 
   return `
-    <div class="product-card${p.in_stock === false ? " card-out-of-stock" : ""}" data-id='${esc(JSON.stringify(p))}'>
+    <div class="product-card${p.in_stock === false ? " card-out-of-stock" : ""}" data-id="${p.product_id}">
       <button class="fav-btn${fav ? " fav-active" : ""}" data-pid="${p.product_id}" aria-label="Guardar en favoritos">♥</button>
       ${image}
       <div class="card-store">${esc(p.store)}</div>
@@ -551,13 +543,13 @@ function attachCardHandlers(container) {
     // Abrir modal al hacer clic en la card (no en el corazón)
     card.addEventListener("click", (e) => {
       if (e.target.closest(".fav-btn")) return;
-      openModal(JSON.parse(card.dataset.id));
+      openModal(_productMap.get(+card.dataset.id));
     });
 
     // Toggle favorito
     card.querySelector(".fav-btn").addEventListener("click", (e) => {
       e.stopPropagation();
-      const product = JSON.parse(card.dataset.id);
+      const product = _productMap.get(+card.dataset.id);
       const nowFav  = toggleFavorite(product);
       e.currentTarget.classList.toggle("fav-active", nowFav);
       updateFavBadge();
@@ -571,6 +563,7 @@ async function loadProducts(q, category, store) {
   grid.innerHTML = `<div class="spinner">Buscando…</div>`;
   try {
     const raw     = await searchProducts(q, category, store);
+    _refreshFavCache();
     const sortBy  = document.getElementById("sort-by").value;
     const results = sortProducts(raw, sortBy);
     if (!results.length) {
@@ -595,6 +588,7 @@ async function loadTrending() {
       grid.innerHTML = `<p class="empty">Aún no hay suficientes datos históricos para calcular aumentos. Volvé en unos días.</p>`;
       return;
     }
+    _refreshFavCache();
     const sortBy  = document.getElementById("sort-by").value;
     const results = sortBy === "price-asc" ? raw : sortProducts(raw, sortBy);
     grid.innerHTML = results.map(productCard).join("");
@@ -659,6 +653,7 @@ function initSearch() {
       btn.className = "pill";
       btn.dataset.cat = cat;
       btn.textContent = cat.replace(/-/g, " ");
+      btn.setAttribute("aria-pressed", "false");
       container.appendChild(btn);
     });
   });
@@ -667,8 +662,9 @@ function initSearch() {
   document.getElementById("category-pills").addEventListener("click", (e) => {
     const btn = e.target.closest(".pill");
     if (!btn) return;
-    document.querySelectorAll(".pill").forEach((p) => p.classList.remove("pill-active"));
+    document.querySelectorAll(".pill").forEach((p) => { p.classList.remove("pill-active"); p.setAttribute("aria-pressed", "false"); });
     btn.classList.add("pill-active");
+    btn.setAttribute("aria-pressed", "true");
     activeCategory = btn.dataset.cat;
     run();
   });
@@ -690,7 +686,7 @@ function dealRow(d) {
   return `
     <tr>
       <td class="td-name">
-        <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a>
+        <a href="${safeHref(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a>
         <small>${esc(d.store)} · ${esc(d.category ?? "")}</small>
       </td>
       <td>${colones(d.current_price)}</td>
@@ -843,6 +839,7 @@ async function loadFavoritesView() {
   }
 
   // 1. Mostrar datos guardados al instante (pueden ser viejos)
+  _refreshFavCache();
   grid.innerHTML = favs.map(productCard).join("");
   attachCardHandlers(grid);
 
@@ -866,6 +863,7 @@ async function loadFavoritesView() {
   );
 
   // 3. Re-renderizar con precios frescos y badge de variación
+  _refreshFavCache();
   grid.innerHTML = refreshed.map(productCard).join("");
   attachCardHandlers(grid);
 }
@@ -882,7 +880,7 @@ function storeCard(s) {
   return `
     <div class="store-card">
       <h3>${esc(s.name)}</h3>
-      <p>${esc(s.scraper_type.toUpperCase())} · <a href="${esc(s.base_url)}" target="_blank" rel="noopener">${esc(s.base_url)}</a></p>
+      <p>${esc(s.scraper_type.toUpperCase())} · <a href="${safeHref(s.base_url)}" target="_blank" rel="noopener">${esc(s.base_url)}</a></p>
       <div class="store-meta">
         ${statusBadge}
         <span class="badge" style="background:var(--bg);color:var(--text-muted);border:1px solid var(--border)">
