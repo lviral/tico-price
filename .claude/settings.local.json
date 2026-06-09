@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "PowerShell(New-Item -ItemType Directory -Path \"D:\\\\Personal\\\\precio-tracker-cr\\\\scrapers\" -Force)",
-      "PowerShell(New-Item -ItemType Directory -Path \"D:\\\\Personal\\\\precio-tracker-cr\\\\db\" -Force)"
+      "PowerShell(New-Item -ItemType Directory -Path \"D:\\\\Personal\\\\precio-tracker-cr\\\\db\" -Force)",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "Skill(run)"
     ]
   }
 }

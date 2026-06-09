@@ -69,10 +69,10 @@
   <div id="view-products" class="view active">
     <div class="search-bar">
       <input id="search-input" type="search" placeholder="Buscar producto…" autofocus>
-      <select id="filter-store">
+      <select id="filter-store" aria-label="Filtrar por tienda">
         <option value="">Todas las tiendas</option>
       </select>
-      <select id="sort-by" class="sort-select">
+      <select id="sort-by" class="sort-select" aria-label="Ordenar por">
         <option value="price-asc">Precio ↑</option>
         <option value="price-desc">Precio ↓</option>
         <option value="discount-desc">Mayor descuento</option>
@@ -166,11 +166,11 @@
       <p>Monitoreamos los precios de electrodomésticos, celulares y tecnología en las principales tiendas de Costa Rica para que siempre comprés al mejor precio.</p>
     </div>
     <div class="footer-col">
-      <h4>Metodología</h4>
+      <h3>Metodología</h3>
       <p>Los precios se actualizan automáticamente <strong>dos veces al día</strong>. Las variaciones se calculan comparando el precio actual con el historial de cada producto. Las "ofertas engañosas" se detectan cuando el descuento anunciado no coincide con la baja real de precio histórico.</p>
     </div>
     <div class="footer-col">
-      <h4>Tiendas cubiertas</h4>
+      <h3>Tiendas cubiertas</h3>
       <ul class="footer-stores-list">
         <li>Walmart CR</li>
         <li>Siman CR</li>
@@ -223,13 +223,6 @@
   </div>
 </div>
 
-<script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    });
-  }
-</script>
 <script src="/static/js/chart.umd.min.js"></script>
 <script type="module" src="/static/js/app.js"></script>
 </body>

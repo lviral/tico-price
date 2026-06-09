@@ -995,3 +995,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const deepLink = location.pathname.match(/^\/producto\/(\d+)$/);
   if (deepLink) showProductDetail(parseInt(deepLink[1], 10));
 });
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
