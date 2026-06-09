@@ -146,6 +146,27 @@ def init_db() -> None:
         except sqlite3.OperationalError:
             pass
 
+        # Migración: una lectura de precio por producto por día
+        # Elimina duplicados (conserva MAX(id) por (product_id, date)) y crea
+        # unique index para garantizar la invariante en el futuro.
+        try:
+            conn.execute("""
+                DELETE FROM price_history
+                WHERE id NOT IN (
+                    SELECT MAX(id)
+                    FROM price_history
+                    GROUP BY product_id, date(scraped_at)
+                )
+            """)
+            conn.commit()
+            conn.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_ph_product_day
+                ON price_history(product_id, date(scraped_at))
+            """)
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
+
         # Migración: insertar tiendas nuevas (no necesita CHECK fix — ya se hizo arriba)
         for name, base_url, scraper_type in [
             ("RadioShack CR", "https://www.radioshack.cr", "magento"),
@@ -213,11 +234,28 @@ def insert_price(
     discount_pct: float | None = None,
     in_stock: bool = True,
 ) -> None:
-    conn.execute(
-        """INSERT INTO price_history (product_id, price, original_price, discount_pct, in_stock)
-           VALUES (?, ?, ?, ?, ?)""",
-        (product_id, price, original_price, discount_pct, int(in_stock)),
-    )
+    """Inserta o actualiza el precio del día.
+
+    Si ya existe un registro para (product_id, hoy), actualiza los campos de
+    precio sin cambiar scraped_at. Garantiza una sola lectura por día.
+    """
+    existing = conn.execute(
+        "SELECT id FROM price_history WHERE product_id = ? AND date(scraped_at) = date('now') LIMIT 1",
+        (product_id,),
+    ).fetchone()
+    if existing:
+        conn.execute(
+            """UPDATE price_history
+               SET price=?, original_price=?, discount_pct=?, in_stock=?
+               WHERE id=?""",
+            (price, original_price, discount_pct, int(in_stock), existing["id"]),
+        )
+    else:
+        conn.execute(
+            """INSERT INTO price_history (product_id, price, original_price, discount_pct, in_stock)
+               VALUES (?, ?, ?, ?, ?)""",
+            (product_id, price, original_price, discount_pct, int(in_stock)),
+        )
 
 
 def save_product(store_id: int, data: dict) -> tuple[int, bool]:
