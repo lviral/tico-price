@@ -67,9 +67,11 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 _CACHE_RULES: dict[str, str] = {
-    "/categories": "public, max-age=3600, stale-while-revalidate=7200",
-    "/stores":     "public, max-age=3600, stale-while-revalidate=7200",
-    "/version":    "public, max-age=60",
+    "/categories":  "public, max-age=3600, stale-while-revalidate=7200",
+    "/stores":      "public, max-age=3600, stale-while-revalidate=7200",
+    "/version":     "public, max-age=60",
+    "/robots.txt":  "public, max-age=86400",
+    "/sitemap.xml": "public, max-age=3600",
 }
 _CACHE_DEFAULT_API = "public, max-age=300, stale-while-revalidate=600"
 
@@ -471,10 +473,11 @@ def sitemap_xml() -> Response:
         rows = conn.execute(
             """SELECT p.id, ph.scraped_at
                FROM products p
-               LEFT JOIN price_history ph ON ph.id = (
-                   SELECT id FROM price_history WHERE product_id = p.id
-                   ORDER BY scraped_at DESC LIMIT 1
-               )
+               LEFT JOIN (
+                   SELECT product_id, MAX(scraped_at) AS scraped_at
+                   FROM price_history
+                   GROUP BY product_id
+               ) ph ON ph.product_id = p.id
                ORDER BY p.id"""
         ).fetchall()
 

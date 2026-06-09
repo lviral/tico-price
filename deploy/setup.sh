@@ -28,8 +28,6 @@ apt-get install -y -qq \
 
 # Caddy (reverse proxy con HTTPS automático)
 if ! command -v caddy &>/dev/null; then
-    curl -fsSL https://getcaddy.com | bash -s personal
-    # o via apt:
     apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https
     curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key | \
         gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg

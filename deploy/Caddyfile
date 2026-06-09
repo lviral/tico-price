@@ -33,6 +33,6 @@ TU_DOMINIO {
     @manifest path /manifest.json
     header @manifest Cache-Control "public, max-age=3600"
 
-    # Comprimir respuestas
-    encode gzip
+    # Comprimir respuestas (zstd > brotli > gzip, Caddy negocia automáticamente)
+    encode zstd gzip
 }
