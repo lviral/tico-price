@@ -2,8 +2,6 @@ const SHELL = [
   "/",
   "/static/css/style.css",
   "/static/js/app.js",
-  "/static/js/api.js",
-  "/static/js/favorites.js",
   "/static/js/chart.umd.min.js",
   "/static/img/favicon.svg",
 ];

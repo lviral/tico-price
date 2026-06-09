@@ -554,12 +554,16 @@ def static_version() -> dict:
 # ---------------------------------------------------------------------------
 
 _INDEX_TEMPLATE: str | None = None
+_INDEX_TEMPLATE_MTIME: float = 0.0
 
 
 def _index_template() -> str:
-    global _INDEX_TEMPLATE
-    if _INDEX_TEMPLATE is None:
-        _INDEX_TEMPLATE = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    global _INDEX_TEMPLATE, _INDEX_TEMPLATE_MTIME
+    path = FRONTEND_DIR / "index.html"
+    mtime = path.stat().st_mtime
+    if _INDEX_TEMPLATE is None or mtime != _INDEX_TEMPLATE_MTIME:
+        _INDEX_TEMPLATE = path.read_text(encoding="utf-8")
+        _INDEX_TEMPLATE_MTIME = mtime
     return _INDEX_TEMPLATE
 
 
