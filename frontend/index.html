@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TicoPrice — Historial de precios en Costa Rica</title>
 
+  <!-- Preconnect a los CDNs de imágenes más frecuentes en trending (acelera LCP) -->
+  <link rel="preconnect" href="https://www.gollo.com">
+  <link rel="preconnect" href="https://siman.vteximg.com.br">
+
   <!-- SEO -->
   <meta name="description"
     content="Monitoreamos los precios de electrodomésticos, celulares y tecnología en 7 tiendas de Costa Rica. Detectá ofertas reales y seguí el historial de precios.">
@@ -223,7 +227,7 @@
   </div>
 </div>
 
-<script src="/static/js/chart.umd.min.js"></script>
+<!-- chart.umd.min.js se carga bajo demanda desde app.js (lc) cuando se necesita un gráfico -->
 <script src="/static/js/app.js"></script>
 </body>
 </html>
