@@ -1,12 +1,8 @@
-"""Scheduler de scraping: ejecuta runner.run_store() dos veces al día.
+"""Scheduler de scraping: ejecuta runner.run_all() dos veces al día.
 
-Lógica de alerta:
-  Después de cada run se registra el resultado en scrape_runs.
-  Si las últimas 3 corridas de una tienda fueron todas fallidas,
-  la tienda se marca como 'requires_attention' y se emite un log de CRITICAL.
-  Un run exitoso la restaura a 'active'.
-
-Un run se considera exitoso cuando prices_added > 0 y errors == 0.
+El registro en scrape_runs, la alerta por fallos consecutivos y el WAL
+checkpoint viven en runner.run_all() — el mismo camino que usa el timer
+systemd (run.py --once), para que dev y prod compartan la misma lógica.
 """
 
 import logging
@@ -17,20 +13,11 @@ from pathlib import Path
 
 import schedule
 
-from db.database import (
-    checkpoint_wal,
-    get_active_stores,
-    get_consecutive_failures,
-    init_db,
-    mark_store_attention,
-    record_scrape_run,
-    reset_store_status,
-)
-from scrapers.runner import SCRAPER_MAP, STORE_CATEGORIES, run_store
+from db.database import init_db
+from scrapers.runner import run_all
 
 ROOT = Path(__file__).resolve().parent.parent
 LOGS_DIR = ROOT / "logs"
-CONSECUTIVE_FAILURE_THRESHOLD = 3
 
 log = logging.getLogger("scheduler")
 
@@ -89,44 +76,6 @@ def setup_logging() -> None:
 # Job de scraping
 # ---------------------------------------------------------------------------
 
-def _run_one_store(store: object) -> None:
-    """Scrapea una tienda, registra el resultado y verifica fallos consecutivos."""
-    store_id: int = store["id"]
-    store_name: str = store["name"]
-
-    started_at = datetime.now().isoformat(timespec="seconds")
-    try:
-        result = run_store(
-            store_id=store_id,
-            store_name=store_name,
-            scraper_type=store["scraper_type"],
-            base_url=store["base_url"],
-        )
-        success = result.prices_recorded > 0 and result.errors == 0
-        new_p = result.new_products
-        prices = result.prices_recorded
-        errors = result.errors
-    except Exception as exc:
-        log.exception("Error inesperado scrapeando '%s': %s", store_name, exc)
-        success, new_p, prices, errors = False, 0, 0, 1
-
-    finished_at = datetime.now().isoformat(timespec="seconds")
-    record_scrape_run(store_id, started_at, finished_at, success, new_p, prices, errors)
-
-    if success:
-        reset_store_status(store_id)
-    else:
-        consecutive = get_consecutive_failures(store_id, n=CONSECUTIVE_FAILURE_THRESHOLD)
-        if consecutive >= CONSECUTIVE_FAILURE_THRESHOLD:
-            mark_store_attention(store_id)
-            log.critical(
-                "ALERTA: '%s' ha fallado %d veces consecutivas → "
-                "marcada como requires_attention. Revisar manualmente.",
-                store_name,
-                CONSECUTIVE_FAILURE_THRESHOLD,
-            )
-
-
 def scrape_job() -> None:
     """Job que ejecuta el scrape completo de todas las tiendas activas."""
     _rotate_log_if_needed()
@@ -134,16 +83,8 @@ def scrape_job() -> None:
     log.info("Job de scraping iniciado  %s", datetime.now().strftime("%Y-%m-%d %H:%M"))
     log.info("═" * 55)
 
-    stores = get_active_stores()
+    run_all()
 
-    if not stores:
-        log.warning("No hay tiendas activas — job finalizado sin acción")
-        return
-
-    for store in stores:
-        _run_one_store(store)
-
-    checkpoint_wal()
     log.info("Job de scraping completado  %s", datetime.now().strftime("%Y-%m-%d %H:%M"))
 
 

@@ -29,7 +29,11 @@ from slowapi.util import get_remote_address
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8000").rstrip("/")
 
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+# Los contadores de slowapi son en memoria POR proceso: con --workers 2 cada
+# worker cuenta por separado, así que el límite efectivo es ~2x el configurado.
+# Estos valores son la mitad del límite deseado (efectivo: default 200/min,
+# products 30/min, history 60/min, deals/trending/inflation 20/min).
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 from db.database import (
     get_categories,
@@ -224,7 +228,7 @@ class StoreSummary(BaseModel):
         "Si `q` está vacío devuelve todos los productos (hasta 200)."
     ),
 )
-@limiter.limit("30/minute")
+@limiter.limit("15/minute")
 def list_products(
     request: Request,
     q: Annotated[str, Query(description="Texto a buscar en el nombre")] = "",
@@ -264,7 +268,7 @@ def list_products(
         "inferior al promedio histórico, indicando una baja genuina de precio."
     ),
 )
-@limiter.limit("60/minute")
+@limiter.limit("30/minute")
 def product_history(request: Request, product_id: int) -> ProductHistory:
     stats_row = get_product_with_stats(product_id, days=90)
     if stats_row is None:
@@ -319,7 +323,7 @@ def product_history(request: Request, product_id: int) -> ProductHistory:
         "Solo incluye productos con ≥ 3 registros históricos para evitar falsos positivos."
     ),
 )
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")
 def deals(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=200, description="Máximo de resultados")] = 50,
@@ -354,7 +358,7 @@ def deals(
         "en ambos extremos del período."
     ),
 )
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")
 def trending(
     request: Request,
     days: Annotated[int, Query(ge=1, le=90, description="Ventana de días a comparar")] = 7,
@@ -402,7 +406,7 @@ def categories_list() -> list[str]:
         "Incluye desglose por categoría y tendencia semanal de las últimas 12 semanas."
     ),
 )
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")
 def inflation(
     request: Request,
     days: Annotated[int, Query(ge=7, le=365, description="Ventana de comparación en días")] = 30,
@@ -607,13 +611,18 @@ def _ssr_product(product_id: int) -> str | None:
         row = conn.execute(
             """SELECT p.id, p.name, p.image_url, p.category,
                       s.name AS store_name,
-                      (SELECT price FROM price_history
-                       WHERE product_id = p.id
-                       ORDER BY scraped_at DESC, id DESC LIMIT 1) AS current_price
+                      latest.price    AS current_price,
+                      latest.in_stock AS in_stock
                FROM products p
                JOIN stores s ON s.id = p.store_id
+               LEFT JOIN (
+                   SELECT product_id, price, in_stock
+                   FROM price_history
+                   WHERE product_id = ?
+                   ORDER BY scraped_at DESC, id DESC LIMIT 1
+               ) latest ON latest.product_id = p.id
                WHERE p.id = ?""",
-            (product_id,),
+            (product_id, product_id),
         ).fetchone()
 
     if row is None:
@@ -656,22 +665,27 @@ def _ssr_product(product_id: int) -> str | None:
     if image_url:
         result = re.sub(r'\s*<meta property="og:image:(?:width|height|type)"[^\n]*\n?', "\n", result)
 
-    # Canonical link + JSON-LD estructurado para Google rich snippets
-    jsonld = json.dumps(
-        {
-            "@context": "https://schema.org/",
-            "@type": "Product",
-            "name": name,
-            "offers": {
-                "@type": "Offer",
-                "price": price,
-                "priceCurrency": "CRC",
-                "availability": "https://schema.org/InStock",
-                "url": canonical,
-            },
-        },
-        ensure_ascii=False,
-    )
+    # Canonical link + JSON-LD estructurado para Google rich snippets.
+    # Sin precio no hay Offer válida (price: null es inválido para Google).
+    jsonld_data: dict = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": name,
+    }
+    if price:
+        availability = (
+            "https://schema.org/InStock"
+            if row["in_stock"]
+            else "https://schema.org/OutOfStock"
+        )
+        jsonld_data["offers"] = {
+            "@type": "Offer",
+            "price": price,
+            "priceCurrency": "CRC",
+            "availability": availability,
+            "url": canonical,
+        }
+    jsonld = json.dumps(jsonld_data, ensure_ascii=False)
     result = result.replace(
         "</head>",
         f'  <link rel="canonical" href="{q(canonical)}">\n'
@@ -696,4 +710,6 @@ def spa_fallback(full_path: str) -> Response | FileResponse:
         rendered = _ssr_product(int(match.group(1)))
         if rendered:
             return Response(content=rendered, media_type="text/html; charset=utf-8")
-    return FileResponse(FRONTEND_DIR / "index.html")
+    # Ruta desconocida o producto inexistente: servir el SPA con 404 para que
+    # los crawlers no indexen soft-404s (el frontend renderiza igual).
+    return FileResponse(FRONTEND_DIR / "index.html", status_code=404)

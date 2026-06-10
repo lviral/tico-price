@@ -4,8 +4,18 @@ import logging
 import sys
 import time
 from dataclasses import dataclass
+from datetime import datetime
 
-from db.database import get_active_stores, init_db, save_product
+from db.database import (
+    checkpoint_wal,
+    get_active_stores,
+    get_consecutive_failures,
+    init_db,
+    mark_store_attention,
+    record_scrape_run,
+    reset_store_status,
+    save_product,
+)
 from scrapers.magento import MagentoScraper
 from scrapers.pricesmart import PriceSmartScraper
 from scrapers.vtex import VtexScraper
@@ -294,8 +304,40 @@ def run_store(store_id: int, store_name: str, scraper_type: str, base_url: str) 
 # Punto de entrada
 # ---------------------------------------------------------------------------
 
+CONSECUTIVE_FAILURE_THRESHOLD = 3
+
+
+def _record_and_alert(store_id: int, store_name: str,
+                      started_at: str, finished_at: str,
+                      result: StoreResult) -> None:
+    """Registra el run en scrape_runs y alerta tras N fallos consecutivos.
+
+    Un run es exitoso cuando prices_recorded > 0 y errors == 0.
+    """
+    success = result.prices_recorded > 0 and result.errors == 0
+    record_scrape_run(
+        store_id, started_at, finished_at, success,
+        result.new_products, result.prices_recorded, result.errors,
+    )
+    if success:
+        reset_store_status(store_id)
+        return
+    consecutive = get_consecutive_failures(store_id, n=CONSECUTIVE_FAILURE_THRESHOLD)
+    if consecutive >= CONSECUTIVE_FAILURE_THRESHOLD:
+        mark_store_attention(store_id)
+        log.critical(
+            "ALERTA: '%s' ha fallado %d veces consecutivas → "
+            "marcada como requires_attention. Revisar manualmente.",
+            store_name,
+            CONSECUTIVE_FAILURE_THRESHOLD,
+        )
+
+
 def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
     """Ejecuta el scrape de todas las tiendas activas (o del subconjunto indicado).
+
+    Por cada tienda registra el resultado en scrape_runs y verifica fallos
+    consecutivos. Al finalizar hace WAL checkpoint.
 
     Params
     ------
@@ -319,12 +361,19 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
     results: list[StoreResult] = []
 
     for store in stores:
-        res = run_store(
-            store_id=store["id"],
-            store_name=store["name"],
-            scraper_type=store["scraper_type"],
-            base_url=store["base_url"],
-        )
+        started_at = datetime.now().isoformat(timespec="seconds")
+        try:
+            res = run_store(
+                store_id=store["id"],
+                store_name=store["name"],
+                scraper_type=store["scraper_type"],
+                base_url=store["base_url"],
+            )
+        except Exception as exc:
+            log.exception("Error inesperado scrapeando '%s': %s", store["name"], exc)
+            res = StoreResult(store_name=store["name"], errors=1)
+        finished_at = datetime.now().isoformat(timespec="seconds")
+        _record_and_alert(store["id"], store["name"], started_at, finished_at, res)
         results.append(res)
 
     # -----------------------------------------------------------------------
@@ -351,6 +400,8 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
             r.store_name, r.new_products, r.prices_recorded, status,
         )
     log.info("=" * 55)
+
+    checkpoint_wal()
     return results
 
 

@@ -16,15 +16,14 @@ echo "=========================================="
 echo ""
 
 # ── 1. Paquetes del sistema ─────────────────────────────────────────────────
+# Las librerías de Chromium NO se listan aquí: cambian de nombre entre
+# versiones de Ubuntu (ej. libasound2 → libasound2t64 en 24.04).
+# `playwright install-deps` (paso 5) instala las correctas para el SO.
 echo "[1/7] Instalando dependencias del sistema..."
 apt-get update -qq
 apt-get install -y -qq \
     python3.12 python3.12-venv python3-pip \
-    git curl wget unzip \
-    libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
-    libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-    libgbm1 libasound2 libpango-1.0-0 libcairo2 \
-    fonts-liberation libappindicator3-1 libnspr4
+    git curl wget unzip
 
 # Caddy (reverse proxy con HTTPS automático)
 if ! command -v caddy &>/dev/null; then
