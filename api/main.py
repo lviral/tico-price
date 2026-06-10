@@ -551,12 +551,15 @@ def static_version() -> dict:
     """
     static_dir = FRONTEND_DIR / "static"
     h = hashlib.sha1(usedforsecurity=False)
-    for f in sorted(static_dir.rglob("*")):
-        if f.is_file():
-            stat = f.stat()
-            h.update(f.name.encode())
-            h.update(stat.st_mtime_ns.to_bytes(8, "little"))
-            h.update(stat.st_size.to_bytes(8, "little"))
+    # index.html no vive en /static pero el SW lo precachea ("/" en SHELL):
+    # debe participar del hash para invalidar el caché cuando solo cambia él
+    files = [FRONTEND_DIR / "index.html"]
+    files += sorted(f for f in static_dir.rglob("*") if f.is_file())
+    for f in files:
+        stat = f.stat()
+        h.update(f.name.encode())
+        h.update(stat.st_mtime_ns.to_bytes(8, "little"))
+        h.update(stat.st_size.to_bytes(8, "little"))
     return {"version": h.hexdigest()[:12]}
 
 
