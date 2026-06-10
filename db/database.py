@@ -403,11 +403,16 @@ def search_products(
     category: str | None = None,
     store: str | None = None,
     limit: int = 200,
+    sort: str = "price-asc",
 ) -> list[sqlite3.Row]:
     """Busca productos con filtros opcionales.
 
     Usa FTS5 (prefix matching por token) cuando hay texto; devuelve todos los
     productos ordenados por precio cuando la búsqueda está vacía.
+
+    `sort` controla la dirección del ORDER BY de precio ("price-asc" o
+    "price-desc"). Importa porque el LIMIT corta el resultado: con asc un
+    catálogo grande nunca muestra los productos caros.
 
     Columnas retornadas:
       product_id, sku, product_name, url, category, image_url,
@@ -465,6 +470,8 @@ def search_products(
         )
     """
 
+    price_dir = "DESC" if sort == "price-desc" else "ASC"
+
     extra_conds: list[str] = []
     extra_params: list = []
     if category:
@@ -491,7 +498,7 @@ def search_products(
             ORDER BY
                 ranked.rank,
                 CASE WHEN ph.price IS NULL OR ph.price = 0 THEN 1 ELSE 0 END,
-                ph.price ASC
+                ph.price {price_dir}
             LIMIT ?
         """
         params = [expr] + extra_params + [limit]
@@ -518,7 +525,7 @@ def search_products(
         {where}
         ORDER BY
             CASE WHEN ph.price IS NULL OR ph.price = 0 THEN 1 ELSE 0 END,
-            ph.price ASC
+            ph.price {price_dir}
         LIMIT ?
     """
     params = extra_params + [limit]

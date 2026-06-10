@@ -234,8 +234,17 @@ def list_products(
     q: Annotated[str, Query(description="Texto a buscar en el nombre")] = "",
     category: Annotated[str | None, Query(description="Filtrar por categoría")] = None,
     store: Annotated[str | None, Query(description="Filtrar por nombre de tienda")] = None,
+    sort: Annotated[
+        str,
+        Query(
+            pattern="^price-(asc|desc)$",
+            description="Orden por precio. El LIMIT corta el resultado, así que "
+                        "price-desc es la única forma de ver los productos caros "
+                        "de un catálogo grande.",
+        ),
+    ] = "price-asc",
 ) -> list[ProductSummary]:
-    rows = search_products(q, category=category, store=store)
+    rows = search_products(q, category=category, store=store, sort=sort)
     return [
         ProductSummary(
             product_id=r["product_id"],
