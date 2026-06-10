@@ -40,3 +40,6 @@ test-results/
 # Environment variables
 .env
 .env.*
+
+# Claude Code (config local de la máquina)
+.claude/launch.json
