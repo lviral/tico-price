@@ -1,3 +1,8 @@
+# www redirige al dominio principal (también obtiene su propio certificado)
+www.TU_DOMINIO {
+    redir https://TU_DOMINIO{uri} permanent
+}
+
 TU_DOMINIO {
     # HTTPS automático con Let's Encrypt
     reverse_proxy localhost:8000
