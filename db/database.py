@@ -149,21 +149,27 @@ def init_db() -> None:
         # Migración: una lectura de precio por producto por día
         # Elimina duplicados (conserva MAX(id) por (product_id, date)) y crea
         # unique index para garantizar la invariante en el futuro.
+        # El índice existente es el marcador de migración aplicada: evita el
+        # DELETE full-scan en cada arranque.
         try:
-            conn.execute("""
-                DELETE FROM price_history
-                WHERE id NOT IN (
-                    SELECT MAX(id)
-                    FROM price_history
-                    GROUP BY product_id, date(scraped_at)
-                )
-            """)
-            conn.commit()
-            conn.execute("""
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_ph_product_day
-                ON price_history(product_id, date(scraped_at))
-            """)
-            conn.commit()
+            already = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_ph_product_day'"
+            ).fetchone()
+            if already is None:
+                conn.execute("""
+                    DELETE FROM price_history
+                    WHERE id NOT IN (
+                        SELECT MAX(id)
+                        FROM price_history
+                        GROUP BY product_id, date(scraped_at)
+                    )
+                """)
+                conn.commit()
+                conn.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_ph_product_day
+                    ON price_history(product_id, date(scraped_at))
+                """)
+                conn.commit()
         except sqlite3.OperationalError:
             pass
 

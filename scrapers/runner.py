@@ -351,7 +351,7 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
 
     if not stores:
         log.warning("No hay tiendas activas que procesar")
-        return
+        return []
 
     log.info("=" * 55)
     log.info("Iniciando scrape: %d tienda(s)", len(stores))
