@@ -46,6 +46,10 @@ self.addEventListener("fetch", (e) => {
 
   if (request.method !== "GET") return;
 
+  // Cross-origin (imágenes de CDNs de tiendas, etc.): no interceptar.
+  // La CSP del SW en producción solo permite fetch() same-origin.
+  if (url.origin !== self.location.origin) return;
+
   // API routes: network-first, cache fallback
   if (url.pathname.startsWith("/products") ||
       url.pathname.startsWith("/trending") ||
@@ -88,6 +92,6 @@ self.addEventListener("fetch", (e) => {
         resolveCache().then((name) => caches.open(name).then((c) => c.put(request, clone)));
         return res;
       })
-      .catch(() => caches.match(request) || caches.match("/"))
+      .catch(() => caches.match(request).then((c) => c || caches.match("/")))
   );
 });
