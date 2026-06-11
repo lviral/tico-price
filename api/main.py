@@ -703,7 +703,9 @@ def _ssr_product(product_id: int) -> str | None:
             "availability": availability,
             "url": canonical,
         }
-    jsonld = json.dumps(jsonld_data, ensure_ascii=False)
+    # "</" → "<\/" (escape JSON válido): un nombre de producto scrapeado que
+    # contenga "</script>" no debe poder cerrar el bloque e inyectar HTML
+    jsonld = json.dumps(jsonld_data, ensure_ascii=False).replace("</", "<\\/")
     result = result.replace(
         "</head>",
         f'  <link rel="canonical" href="{q(canonical)}">\n'

@@ -95,6 +95,34 @@ def test_ssr_producto_tiene_og_y_jsonld_valido(client, product_id):
     assert 'rel="canonical"' in r.text
 
 
+def test_ssr_nombre_malicioso_no_inyecta_html(client):
+    """Un nombre scrapeado con </script> no debe romper el bloque JSON-LD."""
+    evil = 'Lavadora </script><h1 id="pwned">x</h1>'
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        store_id = conn.execute("SELECT id FROM stores LIMIT 1").fetchone()[0]
+        cur = conn.execute(
+            "INSERT INTO products (store_id, sku, name, url) VALUES (?, ?, ?, ?)",
+            (store_id, "test-xss-jsonld", evil, "https://example.com/x"),
+        )
+        pid = cur.lastrowid
+        conn.execute(
+            "INSERT INTO price_history (product_id, price) VALUES (?, 100000)",
+            (pid,),
+        )
+        conn.commit()  # visible para la conexión de la API
+
+        r = client.get(f"/producto/{pid}")
+        assert r.status_code == 200
+        assert '<h1 id="pwned">' not in r.text   # no se inyectó HTML crudo
+        assert "<\\/script>" in r.text            # quedó escapado en el JSON-LD
+    finally:
+        conn.execute("DELETE FROM price_history WHERE product_id = ?", (pid,))
+        conn.execute("DELETE FROM products WHERE id = ?", (pid,))
+        conn.commit()
+        conn.close()
+
+
 # ── Invariante de BD ─────────────────────────────────────────────────────────
 
 def test_una_lectura_por_producto_por_dia(product_id):
