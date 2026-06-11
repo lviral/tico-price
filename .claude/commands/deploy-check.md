@@ -22,9 +22,10 @@ semáforo final: ¿seguro hacer `git pull` + restart en el servidor?
 ```
 .venv/Scripts/python.exe -m pytest tests/ -q
 ```
-Los 10 tests de `tests/test_api.py` cubren: health, 404 fallback (rutas y
+La suite de `tests/test_api.py` cubre: health, 404 fallback (rutas y
 productos inexistentes), sitemap/robots, orden y paginación de /products,
-validación 422, JSON-LD sin `price: null`, e invariante de una lectura de
+validación 422, JSON-LD sin `price: null` y sin inyección HTML vía
+`</script>` en nombres scrapeados, e invariante de una lectura de
 precio por producto por día. Si pytest no está instalado:
 `pip install -r requirements-dev.txt`.
 
