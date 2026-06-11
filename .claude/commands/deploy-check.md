@@ -18,14 +18,21 @@ semáforo final: ¿seguro hacer `git pull` + restart en el servidor?
   `python -c "import api.main, scrapers.runner, scheduler.cron"`
 - Verificar que `init_db()` corre sin error (incluye las migraciones idempotentes)
 
-### 3. Smoke test local
+### 3. Suite de tests (obligatorio — bloqueante si falla)
+```
+.venv/Scripts/python.exe -m pytest tests/ -q
+```
+Los 10 tests de `tests/test_api.py` cubren: health, 404 fallback (rutas y
+productos inexistentes), sitemap/robots, orden y paginación de /products,
+validación 422, JSON-LD sin `price: null`, e invariante de una lectura de
+precio por producto por día. Si pytest no está instalado:
+`pip install -r requirements-dev.txt`.
+
+Cualquier test en rojo es **bloqueante** — no hay deploy hasta que pase.
+
+### 3b. Smoke test adicional (solo lo que los tests no cubren)
 Levantá la API (`run.py --api`) si no está corriendo, y verificá:
-- `GET /health` → 200 `{"status":"ok","db":"ok"}`
-- `GET /` → 200 con HTML
-- `GET /trending?limit=2` → 200 con datos
-- `GET /ruta-inexistente` → **404** (no 200 — regresión de soft-404)
-- `GET /producto/1` → 200 con og: tags y JSON-LD válido (sin `price: null`)
-- `GET /sitemap.xml` y `GET /robots.txt` → 200
+- `GET /trending?limit=2` → 200 con datos reales
 
 ### 4. Configuración de producción
 - `deploy/Caddyfile`: contiene `TU_DOMINIO` como placeholder (setup.sh lo
