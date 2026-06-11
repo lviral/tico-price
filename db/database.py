@@ -404,6 +404,7 @@ def search_products(
     store: str | None = None,
     limit: int = 200,
     sort: str = "price-asc",
+    offset: int = 0,
 ) -> list[sqlite3.Row]:
     """Busca productos con filtros opcionales.
 
@@ -499,9 +500,9 @@ def search_products(
                 ranked.rank,
                 CASE WHEN ph.price IS NULL OR ph.price = 0 THEN 1 ELSE 0 END,
                 ph.price {price_dir}
-            LIMIT ?
+            LIMIT ? OFFSET ?
         """
-        params = [expr] + extra_params + [limit]
+        params = [expr] + extra_params + [limit, offset]
         try:
             with get_db() as conn:
                 return conn.execute(sql, params).fetchall()
@@ -526,9 +527,9 @@ def search_products(
         ORDER BY
             CASE WHEN ph.price IS NULL OR ph.price = 0 THEN 1 ELSE 0 END,
             ph.price {price_dir}
-        LIMIT ?
+        LIMIT ? OFFSET ?
     """
-    params = extra_params + [limit]
+    params = extra_params + [limit, offset]
     with get_db() as conn:
         return conn.execute(sql, params).fetchall()
 

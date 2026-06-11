@@ -77,8 +77,8 @@
         <option value="">Todas las tiendas</option>
       </select>
       <select id="sort-by" class="sort-select" aria-label="Ordenar por">
+        <option value="price-desc" selected>Precio ↓</option>
         <option value="price-asc">Precio ↑</option>
-        <option value="price-desc">Precio ↓</option>
         <option value="discount-desc">Mayor descuento</option>
         <option value="change-desc">Más aumentaron</option>
         <option value="change-asc">Más bajaron</option>
@@ -118,6 +118,7 @@
         <span id="results-count" class="results-count"></span>
       </div>
       <div id="products-grid" class="products-grid"></div>
+      <div id="load-more" aria-hidden="true"></div>
     </div>
   </div>
 

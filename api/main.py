@@ -228,7 +228,10 @@ class StoreSummary(BaseModel):
         "Si `q` está vacío devuelve todos los productos (hasta 200)."
     ),
 )
-@limiter.limit("15/minute")
+# 60/min por worker (~120 efectivo con 2 workers): el scroll infinito pagina
+# de a 100 — recorrer una categoría grande son ~10 requests, el catálogo
+# completo ~50; el frontend además aplica cooldown de 10s si recibe 429
+@limiter.limit("60/minute")
 def list_products(
     request: Request,
     q: Annotated[str, Query(description="Texto a buscar en el nombre")] = "",
@@ -243,8 +246,11 @@ def list_products(
                         "de un catálogo grande.",
         ),
     ] = "price-asc",
+    limit: Annotated[int, Query(ge=1, le=200, description="Tamaño de página")] = 60,
+    offset: Annotated[int, Query(ge=0, le=20000, description="Desplazamiento para paginación")] = 0,
 ) -> list[ProductSummary]:
-    rows = search_products(q, category=category, store=store, sort=sort)
+    rows = search_products(q, category=category, store=store, sort=sort,
+                           limit=limit, offset=offset)
     return [
         ProductSummary(
             product_id=r["product_id"],
