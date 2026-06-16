@@ -650,19 +650,16 @@ def get_product_with_stats(product_id: int, days: int = 90) -> sqlite3.Row | Non
 
 
 def get_deals(limit: int = 50) -> list[sqlite3.Row]:
-    """Productos donde el descuento anunciado no coincide con la bajada real de precio.
+    """Productos con bajadas reales de precio detectadas en el historial.
 
-    Calcula:
-      - advertised_discount : discount_pct del último registro (vs original_price)
-      - real_discount        : (max_price_90d - current_price) / max_price_90d * 100
-      - deception_gap        : advertised_discount - real_discount
-                               (positivo = el anuncio exagera el descuento)
-
-    Solo incluye productos con descuento anunciado y ≥ 3 registros históricos.
+    Un producto aparece si:
+      - El precio actual es ≤ 1 % por encima de su mínimo histórico (en los 90d disponibles)
+      - El máximo histórico supera al mínimo (hubo variación real de precio)
+      - La bajada respecto al máximo es ≥ 5 %
+      - Tiene ≥ 3 registros históricos
 
     Columnas: product_id, product_name, url, category, store_name,
-              current_price, original_price, advertised_discount,
-              real_discount, deception_gap, price_max_90d, sample_count
+              current_price, price_max_90d, price_avg_90d, real_discount, sample_count
     """
     sql = """
         SELECT
@@ -671,24 +668,18 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
             p.url,
             p.category,
             s.name  AS store_name,
-            latest.price              AS current_price,
-            latest.original_price,
-            latest.discount_pct       AS advertised_discount,
+            latest.price                                   AS current_price,
+            stats.price_max                                AS price_max_90d,
+            ROUND(stats.price_avg, 0)                      AS price_avg_90d,
             ROUND(
                 (stats.price_max - latest.price) * 100.0 / stats.price_max,
                 1
-            )                         AS real_discount,
-            ROUND(
-                latest.discount_pct
-                - (stats.price_max - latest.price) * 100.0 / stats.price_max,
-                1
-            )                         AS deception_gap,
-            stats.price_max           AS price_max_90d,
+            )                                              AS real_discount,
             stats.sample_count
         FROM products p
         JOIN stores s ON s.id = p.store_id
         JOIN (
-            SELECT product_id, price, original_price, discount_pct
+            SELECT product_id, price
             FROM price_history
             WHERE id IN (
                 SELECT MAX(id) FROM price_history GROUP BY product_id
@@ -698,15 +689,18 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
             SELECT
                 product_id,
                 MAX(price)  AS price_max,
+                MIN(price)  AS price_min,
+                AVG(price)  AS price_avg,
                 COUNT(*)    AS sample_count
             FROM price_history
             WHERE scraped_at >= datetime('now', '-90 days')
             GROUP BY product_id
         ) stats ON stats.product_id = p.id
-        WHERE latest.discount_pct IS NOT NULL
-          AND latest.discount_pct > 0
+        WHERE latest.price <= stats.price_min * 1.01
+          AND stats.price_max > stats.price_min
+          AND ROUND((stats.price_max - latest.price) * 100.0 / stats.price_max, 1) >= 5.0
           AND stats.sample_count >= 3
-        ORDER BY deception_gap DESC
+        ORDER BY real_discount DESC
         LIMIT ?
     """
     with get_db() as conn:

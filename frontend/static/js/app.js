@@ -93,13 +93,11 @@
         <small>${i(e.store)} \xB7 ${i(e.category??"")}</small>
       </td>
       <td>${l(e.current_price)}</td>
-      <td>${l(e.original_price)}</td>
-      <td>${e.advertised_discount.toFixed(1)}%</td>
-      <td>${e.real_discount.toFixed(1)}%</td>
-      <td class="${fe(e.deception_gap)}">${e.deception_gap.toFixed(1)}%</td>
+      <td>${l(e.price_max_90d)}</td>
+      <td class="${fe(e.real_discount)}">↓ ${e.real_discount.toFixed(1)}%</td>
       <td style="color:var(--text-muted)">${e.sample_count}</td>
-    </tr>`}async function ye(){let e=document.getElementById("deals-tbody");e.innerHTML='<tr><td colspan="7" class="spinner">Calculando\u2026</td></tr>';try{let t=await F(100);if(!t.length){e.innerHTML=`<tr><td colspan="7" class="empty">
-        No hay datos suficientes a\xFAn. Se necesitan \u2265 3 scrapes por producto.</td></tr>`;return}e.innerHTML=t.map(he).join("")}catch(t){e.innerHTML=`<tr><td colspan="7" class="empty">Error: ${i(t.message)}</td></tr>`}}var $=null;function Z(e){if(e==null)return{text:"\u2014",cls:""};let t=e>0?"+":"",n=e>0?"inf-up":e<0?"inf-down":"inf-flat";return{text:`${t}${e.toFixed(1)}%`,cls:n}}function be(e){let t=document.getElementById("inflation-cards"),n=document.getElementById("inflation-banner");if(!e.product_count){n.classList.add("hidden");return}n.classList.remove("hidden");let a=Z(e.overall_change_pct),o=e.by_category.filter(d=>d.category&&d.product_count>=3).slice(0,5).map(d=>{let p=Z(d.avg_change_pct);return`
+    </tr>`}async function ye(){let e=document.getElementById("deals-tbody");e.innerHTML='<tr><td colspan="5" class="spinner">Calculando\u2026</td></tr>';try{let t=await F(100);if(!t.length){e.innerHTML=`<tr><td colspan="5" class="empty">
+        A\xFAn no hay bajadas de precio detectadas. El historial necesita m\xE1s variaci\xF3n en los precios.</td></tr>`;return}e.innerHTML=t.map(he).join("")}catch(t){e.innerHTML=`<tr><td colspan="5" class="empty">Error: ${i(t.message)}</td></tr>`}}var $=null;function Z(e){if(e==null)return{text:"\u2014",cls:""};let t=e>0?"+":"",n=e>0?"inf-up":e<0?"inf-down":"inf-flat";return{text:`${t}${e.toFixed(1)}%`,cls:n}}function be(e){let t=document.getElementById("inflation-cards"),n=document.getElementById("inflation-banner");if(!e.product_count){n.classList.add("hidden");return}n.classList.remove("hidden");let a=Z(e.overall_change_pct),o=e.by_category.filter(d=>d.category&&d.product_count>=3).slice(0,5).map(d=>{let p=Z(d.avg_change_pct);return`
         <div class="inf-card">
           <div class="inf-val ${p.cls}">${p.text}</div>
           <div class="inf-label">${i(d.category.replace(/-/g," "))}</div>

@@ -171,14 +171,9 @@ class DealItem(BaseModel):
     category: str | None
     store: str
     current_price: float
-    original_price: float | None
-    advertised_discount: float = Field(description="Descuento anunciado por la tienda (%)")
-    real_discount: float = Field(description="Descuento real vs máximo histórico 90 días (%)")
-    deception_gap: float = Field(
-        description="advertised_discount - real_discount. "
-        "Positivo = la tienda exagera el descuento."
-    )
-    price_max_90d: float
+    price_max_90d: float = Field(description="Precio máximo en la ventana de 90 días")
+    price_avg_90d: float = Field(description="Precio promedio en la ventana de 90 días")
+    real_discount: float = Field(description="Bajada real vs máximo histórico (%)")
     sample_count: int
 
 
@@ -328,14 +323,12 @@ def product_history(request: Request, product_id: int) -> ProductHistory:
 @app.get(
     "/deals",
     response_model=list[DealItem],
-    summary="Detectar descuentos engañosos",
+    summary="Bajadas reales de precio",
     description=(
-        "Lista productos donde el descuento *anunciado* por la tienda no se corresponde "
-        "con la variación real del precio histórico. "
-        "El campo `deception_gap` mide la diferencia: un valor positivo alto significa "
-        "que la tienda anuncia, por ejemplo, 40 % de descuento pero el precio máximo "
-        "de los últimos 90 días era solo un 5 % más caro. "
-        "Solo incluye productos con ≥ 3 registros históricos para evitar falsos positivos."
+        "Lista productos cuyo precio actual está en o cerca de su mínimo histórico "
+        "y al menos un 5 % por debajo de su máximo en los últimos 90 días. "
+        "Solo incluye productos con ≥ 3 registros históricos y variación real de precio. "
+        "No depende de los descuentos anunciados por las tiendas."
     ),
 )
 @limiter.limit("10/minute")
@@ -352,11 +345,9 @@ def deals(
             category=r["category"],
             store=r["store_name"],
             current_price=r["current_price"],
-            original_price=r["original_price"],
-            advertised_discount=r["advertised_discount"],
-            real_discount=r["real_discount"] or 0.0,
-            deception_gap=r["deception_gap"] or 0.0,
             price_max_90d=r["price_max_90d"],
+            price_avg_90d=r["price_avg_90d"] or r["current_price"],
+            real_discount=r["real_discount"] or 0.0,
             sample_count=r["sample_count"],
         )
         for r in rows
