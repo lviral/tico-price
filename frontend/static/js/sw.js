@@ -1,3 +1,4 @@
+// bump para forzar reinstalación del SW y re-cacheo de app.js: 2026-06-16
 const SHELL = [
   "/",
   "/static/css/style.css",
