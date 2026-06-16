@@ -17,7 +17,7 @@
         <div class="lbl">Promedio 90d</div>
       </div>
     </div>
-    ${a.length>=2?'<div class="chart-wrap"><canvas id="history-chart"></canvas></div>':""}
+    ${a.length>=2?'<div class="chart-wrap" style="height:260px"><canvas id="history-chart"></canvas></div>':""}
     ${e.sample_count<3?`<p class="history-note">
       Solo ${e.sample_count} registro(s) disponibles. ${o} El historial crecer\xE1 con m\xE1s scrapes.</p>`:""}
     <div class="modal-cta">
