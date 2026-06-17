@@ -26,14 +26,15 @@ CREATE INDEX IF NOT EXISTS idx_scrape_runs_store_id ON scrape_runs(store_id);
 CREATE INDEX IF NOT EXISTS idx_scrape_runs_started  ON scrape_runs(started_at);
 
 CREATE TABLE IF NOT EXISTS products (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    store_id    INTEGER NOT NULL REFERENCES stores(id),
-    sku         TEXT    NOT NULL,
-    name        TEXT    NOT NULL,
-    url         TEXT    NOT NULL,
-    category    TEXT,
-    image_url   TEXT,
-    created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    store_id     INTEGER NOT NULL REFERENCES stores(id),
+    sku          TEXT    NOT NULL,
+    name         TEXT    NOT NULL,
+    url          TEXT    NOT NULL,
+    category     TEXT,
+    image_url    TEXT,
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    last_seen_at TEXT    NOT NULL DEFAULT (datetime('now')),
     UNIQUE (store_id, sku)
 );
 

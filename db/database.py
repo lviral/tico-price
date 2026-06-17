@@ -46,12 +46,28 @@ def init_db() -> None:
             "ALTER TABLE stores ADD COLUMN status TEXT NOT NULL DEFAULT 'active' "
             "CHECK (status IN ('active', 'requires_attention'))",
             "ALTER TABLE products ADD COLUMN image_url TEXT",
+            "ALTER TABLE products ADD COLUMN last_seen_at TEXT",
         ]:
             try:
                 conn.execute(migration)
                 conn.commit()
             except sqlite3.OperationalError:
                 pass  # la columna ya existe
+
+        # Backfill last_seen_at: poblar desde MAX(scraped_at) de price_history para
+        # productos existentes donde todavía es NULL (primera vez que corre esta migración)
+        try:
+            conn.execute("""
+                UPDATE products
+                SET last_seen_at = (
+                    SELECT MAX(scraped_at) FROM price_history
+                    WHERE product_id = products.id
+                )
+                WHERE last_seen_at IS NULL
+            """)
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
 
         # Migración FTS5: recrear índice standalone si existe como content table
         try:
@@ -220,7 +236,8 @@ def upsert_product(
 
     if existing:
         conn.execute(
-            "UPDATE products SET name = ?, url = ?, category = ?, image_url = ? WHERE id = ?",
+            "UPDATE products SET name = ?, url = ?, category = ?, image_url = ?, "
+            "last_seen_at = datetime('now') WHERE id = ?",
             (name, url, category, image_url, existing["id"]),
         )
         return existing["id"], False
@@ -479,7 +496,7 @@ def search_products(
 
     price_dir = "DESC" if sort == "price-desc" else "ASC"
 
-    extra_conds: list[str] = []
+    extra_conds: list[str] = ["(p.last_seen_at IS NULL OR p.last_seen_at >= datetime('now', '-14 days'))"]
     extra_params: list = []
     if category:
         extra_conds.append("p.category LIKE ?")
@@ -679,7 +696,7 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
         FROM products p
         JOIN stores s ON s.id = p.store_id
         JOIN (
-            SELECT product_id, price, scraped_at
+            SELECT product_id, price
             FROM price_history
             WHERE id IN (
                 SELECT MAX(id) FROM price_history GROUP BY product_id
@@ -701,7 +718,7 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
           AND ROUND((stats.price_max - latest.price) * 100.0 / stats.price_max, 1) >= 5.0
           AND stats.sample_count >= 3
           AND latest.price >= stats.price_avg * 0.4
-          AND latest.scraped_at >= datetime('now', '-7 days')
+          AND p.last_seen_at >= datetime('now', '-14 days')
         ORDER BY real_discount DESC
         LIMIT ?
     """

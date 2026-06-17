@@ -43,6 +43,7 @@ from db.database import (
     get_product_with_stats,
     get_stores_summary,
     get_top_increases,
+    init_db,
     search_products,
 )
 
@@ -50,10 +51,18 @@ from db.database import (
 # App
 # ---------------------------------------------------------------------------
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app):
+    init_db()
+    yield
+
 app = FastAPI(
     title="TicoPrice API",
     description="Historial de precios de electrodomésticos, celulares y tecnología en Costa Rica.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter
