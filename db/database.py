@@ -679,7 +679,7 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
         FROM products p
         JOIN stores s ON s.id = p.store_id
         JOIN (
-            SELECT product_id, price
+            SELECT product_id, price, scraped_at
             FROM price_history
             WHERE id IN (
                 SELECT MAX(id) FROM price_history GROUP BY product_id
@@ -701,6 +701,7 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
           AND ROUND((stats.price_max - latest.price) * 100.0 / stats.price_max, 1) >= 5.0
           AND stats.sample_count >= 3
           AND latest.price >= stats.price_avg * 0.4
+          AND latest.scraped_at >= datetime('now', '-7 days')
         ORDER BY real_discount DESC
         LIMIT ?
     """
