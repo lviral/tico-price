@@ -700,6 +700,7 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
           AND stats.price_max > stats.price_min
           AND ROUND((stats.price_max - latest.price) * 100.0 / stats.price_max, 1) >= 5.0
           AND stats.sample_count >= 3
+          AND latest.price >= stats.price_avg * 0.4
         ORDER BY real_discount DESC
         LIMIT ?
     """
