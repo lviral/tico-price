@@ -85,7 +85,7 @@
         <option value="change-asc">Más bajaron</option>
       </select>
     </div>
-    <div id="category-pills" class="category-pills">
+    <div id="category-pills" class="category-pills" role="group" aria-label="Filtrar por categoría">
       <button class="pill pill-active" data-cat="" aria-pressed="true">Todas</button>
     </div>
 
@@ -139,7 +139,8 @@
             <th title="Cantidad de registros históricos">Registros</th>
           </tr>
         </thead>
-        <tbody id="deals-tbody"></tbody>
+        <caption class="sr-only">Productos en mínimos históricos</caption>
+      <tbody id="deals-tbody"></tbody>
       </table>
     </div>
   </div>
@@ -206,7 +207,7 @@
 </footer>
 
 <!-- ── Modal historial ───────────────────────────────── -->
-<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true">
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
     <div class="modal-header">
       <div>

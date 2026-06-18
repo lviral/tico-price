@@ -9,6 +9,7 @@ Uso:
 
 import argparse
 import io
+import os
 import subprocess
 import sys
 import time
@@ -17,10 +18,10 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 from playwright.sync_api import sync_playwright
 
-PROD_SSH = "root@87.99.130.13"
-PROD_DB_PATH = "/opt/precio-tracker/db/prices.db"
-LOCAL_DB_PATH = "db/prices.db"
-SSH_KEY = r"D:\Users\lvidal\.ssh\id_ed25519"
+PROD_SSH = os.getenv("PROD_SSH", "root@87.99.130.13")
+PROD_DB_PATH = os.getenv("PROD_DB_PATH", "/opt/precio-tracker/db/prices.db")
+LOCAL_DB_PATH = os.getenv("LOCAL_DB_PATH", "db/prices.db")
+SSH_KEY = os.getenv("SSH_KEY", r"D:\Users\lvidal\.ssh\id_ed25519")
 
 
 def pull_db():
