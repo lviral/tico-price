@@ -1,7 +1,7 @@
 {
   "name": "TicoPrice",
   "short_name": "TicoPrice",
-  "description": "Historial de precios en Costa Rica — 7 tiendas, actualización 2x/día.",
+  "description": "Historial de precios en Costa Rica — 9 tiendas, actualización diaria.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f1f5f9",

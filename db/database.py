@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import sqlite3
 from contextlib import contextmanager
@@ -7,7 +8,7 @@ from typing import Generator
 
 log = logging.getLogger(__name__)
 
-DB_PATH = Path(__file__).parent / "prices.db"
+DB_PATH = Path(os.getenv("DB_PATH", str(Path(__file__).parent / "prices.db")))
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 
@@ -40,6 +41,8 @@ def init_db() -> None:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     try:
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA wal_autocheckpoint = 500")
         conn.executescript(sql)
         # Migraciones para BDs existentes (ALTER TABLE no soporta IF NOT EXISTS)
         for migration in [
@@ -415,7 +418,7 @@ def _fts_expr(raw: str) -> str | None:
     Retorna None si no quedan tokens después de limpiar.
     """
     clean = re.sub(r'["\(\)\^\-\*\+]', ' ', raw)
-    tokens = [t for t in clean.split() if t]
+    tokens = [t for t in clean.split() if t and len(t) <= 50][:10]
     if not tokens:
         return None
     return " ".join(f'"{t}"*' for t in tokens)

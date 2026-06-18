@@ -72,6 +72,7 @@
   <!-- ── Productos ─────────────────────────────────── -->
   <div id="view-products" class="view active">
     <div class="search-bar">
+      <label class="sr-only" for="search-input">Buscar producto</label>
       <input id="search-input" type="search" placeholder="Buscar producto…" autofocus>
       <select id="filter-store" aria-label="Filtrar por tienda">
         <option value="">Todas las tiendas</option>
@@ -224,7 +225,7 @@
         <button id="modal-close" class="modal-close" aria-label="Cerrar">&times;</button>
       </div>
     </div>
-    <div id="modal-body" class="modal-body"></div>
+    <div id="modal-body" class="modal-body" aria-live="polite"></div>
   </div>
 </div>
 

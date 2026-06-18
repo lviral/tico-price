@@ -8,6 +8,7 @@ El precio viene en price_CR con fractionDigits=2 (dividir por 100 para obtener C
 """
 
 import logging
+import os
 import re
 import time
 import urllib.error
@@ -25,11 +26,11 @@ _UA = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
 )
-# Static Bloomreach credentials (embedded in frontend JS bundle)
-_ACCOUNT_ID = "7024"
-_AUTH_KEY = "ev7libhybjg5h1d1"
-_DOMAIN_KEY = "pricesmart_bloomreach_io_es"
-_VIEW_ID = "CR"
+# Bloomreach credentials — set via env vars; defaults are the values embedded in frontend JS
+_ACCOUNT_ID = os.getenv("BLOOMREACH_ACCOUNT_ID", "7024")
+_AUTH_KEY = os.getenv("BLOOMREACH_AUTH_KEY", "ev7libhybjg5h1d1")
+_DOMAIN_KEY = os.getenv("BLOOMREACH_DOMAIN_KEY", "pricesmart_bloomreach_io_es")
+_VIEW_ID = os.getenv("BLOOMREACH_VIEW_ID", "CR")
 _FL = (
     "pid,title,price_CR,thumb_image,brand,slug,"
     "master_sku,availability_CR,fractionDigits,currency"

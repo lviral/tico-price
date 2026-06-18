@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import time
 from pathlib import Path
 from typing import Annotated
 
@@ -31,9 +32,9 @@ SITE_URL = os.getenv("SITE_URL", "http://localhost:8000").rstrip("/")
 
 # Los contadores de slowapi son en memoria POR proceso: con --workers 2 cada
 # worker cuenta por separado, así que el límite efectivo es ~2x el configurado.
-# Estos valores son la mitad del límite deseado (efectivo: default 200/min,
-# products 30/min, history 60/min, deals/trending/inflation 20/min).
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+# Estos valores son la mitad del límite deseado (efectivo: default 100/min,
+# products 60/min, history 30/min, deals/trending/inflation 20/min).
+limiter = Limiter(key_func=get_remote_address, default_limits=["50/minute"])
 
 from db.database import (
     get_categories,
@@ -58,11 +59,14 @@ async def lifespan(app):
     init_db()
     yield
 
+_is_dev = "localhost" in SITE_URL
 app = FastAPI(
     title="TicoPrice API",
     description="Historial de precios de electrodomésticos, celulares y tecnología en Costa Rica.",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if _is_dev else None,
+    redoc_url="/redoc" if _is_dev else None,
 )
 
 app.state.limiter = limiter
@@ -232,13 +236,11 @@ class StoreSummary(BaseModel):
         "Si `q` está vacío devuelve todos los productos (hasta 200)."
     ),
 )
-# 60/min por worker (~120 efectivo con 2 workers): el scroll infinito pagina
-# de a 100 — recorrer una categoría grande son ~10 requests, el catálogo
-# completo ~50; el frontend además aplica cooldown de 10s si recibe 429
-@limiter.limit("60/minute")
+# 30/min por worker (~60 efectivo con 2 workers)
+@limiter.limit("30/minute")
 def list_products(
     request: Request,
-    q: Annotated[str, Query(description="Texto a buscar en el nombre")] = "",
+    q: Annotated[str, Query(description="Texto a buscar en el nombre", max_length=200)] = "",
     category: Annotated[str | None, Query(description="Filtrar por categoría")] = None,
     store: Annotated[str | None, Query(description="Filtrar por nombre de tienda")] = None,
     sort: Annotated[
@@ -287,7 +289,7 @@ def list_products(
         "inferior al promedio histórico, indicando una baja genuina de precio."
     ),
 )
-@limiter.limit("30/minute")
+@limiter.limit("15/minute")
 def product_history(request: Request, product_id: int) -> ProductHistory:
     stats_row = get_product_with_stats(product_id, days=90)
     if stats_row is None:
@@ -488,8 +490,18 @@ def robots_txt() -> PlainTextResponse:
     )
 
 
+_sitemap_cache: str | None = None
+_sitemap_cache_ts: float = 0.0
+_SITEMAP_TTL = 3600.0  # 1 hora
+
+
 @app.get("/sitemap.xml", include_in_schema=False)
 def sitemap_xml() -> Response:
+    global _sitemap_cache, _sitemap_cache_ts
+    now = time.monotonic()
+    if _sitemap_cache is not None and (now - _sitemap_cache_ts) < _SITEMAP_TTL:
+        return Response(content=_sitemap_cache, media_type="application/xml")
+
     from db.database import get_db
     with get_db() as conn:
         rows = conn.execute(
@@ -522,6 +534,8 @@ def sitemap_xml() -> Response:
         + "\n".join(urls)
         + "\n</urlset>"
     )
+    _sitemap_cache = xml
+    _sitemap_cache_ts = now
     return Response(content=xml, media_type="application/xml")
 
 
