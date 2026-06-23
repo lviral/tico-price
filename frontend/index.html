@@ -59,6 +59,7 @@
   <nav>
     <button type="button" class="active" data-view="view-products">Productos</button>
     <button type="button" data-view="view-deals">Ofertas</button>
+    <button type="button" data-view="view-pricecheck">Verificar</button>
     <button type="button" data-view="view-stores">Tiendas</button>
     <button type="button" data-view="view-favorites" class="nav-fav-btn">
       ♥ Favoritos<span id="fav-badge" class="nav-badge hidden"></span>
@@ -129,6 +130,18 @@
       🏷️ Productos en mínimos históricos — bajadas reales detectadas en nuestros registros
     </p>
     <div id="deals-grid" class="products-grid"></div>
+  </div>
+
+  <!-- ── Verificar oferta ─────────────────────────── -->
+  <div id="view-pricecheck" class="view">
+    <p class="section-title" id="pricecheck-summary"></p>
+    <div class="pricecheck-filter" id="pricecheck-filter">
+      <button class="pill pill-active" data-verdict="all">Todas</button>
+      <button class="pill" data-verdict="fake">🔴 Infladas</button>
+      <button class="pill" data-verdict="partial">🟡 Parciales</button>
+      <button class="pill" data-verdict="real">🟢 Reales</button>
+    </div>
+    <div id="pricecheck-grid" class="products-grid"></div>
   </div>
 
   <!-- ── Tiendas ───────────────────────────────────── -->

@@ -730,6 +730,74 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
         return conn.execute(sql, (limit,)).fetchall()
 
 
+def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
+    """Productos con descuento anunciado por la tienda comparado contra historial real.
+
+    Veredicto:
+      real    — descuento real (vs promedio 90d) >= 80 % del anunciado
+      partial — descuento real >= 30 % del anunciado
+      fake    — descuento real < 30 % del anunciado (precio "original" inflado)
+
+    Columnas: product_id, name, url, category, image_url, store,
+              current_price, original_price, announced_discount,
+              real_discount, sample_count, verdict
+    """
+    sql = """
+        SELECT
+            p.id        AS product_id,
+            p.name,
+            p.url,
+            p.category,
+            p.image_url,
+            s.name      AS store,
+            latest.price                                                    AS current_price,
+            latest.original_price,
+            ROUND(
+                (latest.original_price - latest.price) * 100.0 / latest.original_price,
+                1
+            )                                                               AS announced_discount,
+            ROUND(
+                (stats.price_avg - latest.price) * 100.0 / NULLIF(stats.price_avg, 0),
+                1
+            )                                                               AS real_discount,
+            stats.sample_count,
+            CASE
+                WHEN (stats.price_avg - latest.price) / NULLIF(stats.price_avg, 0)
+                     >= 0.8 * (latest.original_price - latest.price) / latest.original_price
+                THEN 'real'
+                WHEN (stats.price_avg - latest.price) / NULLIF(stats.price_avg, 0)
+                     >= 0.3 * (latest.original_price - latest.price) / latest.original_price
+                THEN 'partial'
+                ELSE 'fake'
+            END                                                             AS verdict
+        FROM products p
+        JOIN stores s ON s.id = p.store_id
+        JOIN (
+            SELECT product_id, price, original_price
+            FROM price_history
+            WHERE id IN (SELECT MAX(id) FROM price_history GROUP BY product_id)
+        ) latest ON latest.product_id = p.id
+        JOIN (
+            SELECT
+                product_id,
+                AVG(price)  AS price_avg,
+                COUNT(*)    AS sample_count
+            FROM price_history
+            WHERE scraped_at >= datetime('now', '-90 days')
+            GROUP BY product_id
+        ) stats ON stats.product_id = p.id
+        WHERE latest.original_price IS NOT NULL
+          AND latest.original_price > latest.price
+          AND latest.price > 0
+          AND stats.sample_count >= 3
+          AND p.last_seen_at >= datetime('now', '-7 days')
+        ORDER BY announced_discount DESC
+        LIMIT ?
+    """
+    with get_db() as conn:
+        return conn.execute(sql, (limit,)).fetchall()
+
+
 def get_inflation_index(days: int = 30) -> dict:
     """Calcula la variación promedio de precios en los últimos `days` días.
 

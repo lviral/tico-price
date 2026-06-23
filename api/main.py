@@ -40,6 +40,7 @@ from db.database import (
     get_categories,
     get_deals,
     get_inflation_index,
+    get_price_check,
     get_price_history,
     get_product_with_stats,
     get_stores_summary,
@@ -189,6 +190,21 @@ class DealItem(BaseModel):
     price_avg_90d: float = Field(description="Precio promedio en la ventana de 90 días")
     real_discount: float = Field(description="Bajada real vs máximo histórico (%)")
     sample_count: int
+
+
+class PriceCheckItem(BaseModel):
+    product_id: int
+    name: str
+    url: str
+    category: str | None
+    image_url: str | None = None
+    store: str
+    current_price: float
+    original_price: float
+    announced_discount: float = Field(description="Descuento anunciado por la tienda (%)")
+    real_discount: float = Field(description="Descuento real vs promedio histórico 90d (%)")
+    sample_count: int
+    verdict: str = Field(description="real | partial | fake")
 
 
 class CategoryInflation(BaseModel):
@@ -362,6 +378,41 @@ def deals(
             price_avg_90d=r["price_avg_90d"] or r["current_price"],
             real_discount=r["real_discount"] or 0.0,
             sample_count=r["sample_count"],
+        )
+        for r in rows
+    ]
+
+
+@app.get(
+    "/price-check",
+    response_model=list[PriceCheckItem],
+    summary="Verificar si las ofertas de tiendas son reales",
+    description=(
+        "Compara el descuento anunciado por cada tienda con el historial real de precios. "
+        "Veredicto: 'real' si el descuento real (vs promedio 90d) es ≥ 80 % del anunciado, "
+        "'partial' si ≥ 30 %, 'fake' si < 30 % (precio original inflado artificialmente)."
+    ),
+)
+@limiter.limit("10/minute")
+def price_check(
+    request: Request,
+    limit: Annotated[int, Query(ge=1, le=500, description="Máximo de resultados")] = 300,
+) -> list[PriceCheckItem]:
+    rows = get_price_check(limit=limit)
+    return [
+        PriceCheckItem(
+            product_id=r["product_id"],
+            name=r["name"],
+            url=r["url"],
+            category=r["category"],
+            image_url=r["image_url"],
+            store=r["store"],
+            current_price=r["current_price"],
+            original_price=r["original_price"],
+            announced_discount=r["announced_discount"] or 0.0,
+            real_discount=r["real_discount"] or 0.0,
+            sample_count=r["sample_count"],
+            verdict=r["verdict"],
         )
         for r in rows
     ]
