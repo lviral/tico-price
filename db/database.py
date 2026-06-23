@@ -531,11 +531,11 @@ def search_products(
     ]
     extra_params: list = []
     if category:
-        extra_conds.append("p.category LIKE ?")
-        extra_params.append(f"%{category}%")
+        extra_conds.append("p.category LIKE ? ESCAPE '\\'")
+        extra_params.append("%" + category.replace("%", r"\%").replace("_", r"\_") + "%")
     if store:
-        extra_conds.append("s.name LIKE ?")
-        extra_params.append(f"%{store}%")
+        extra_conds.append("s.name LIKE ? ESCAPE '\\'")
+        extra_params.append("%" + store.replace("%", r"\%").replace("_", r"\_") + "%")
     extra_where = (" AND " + " AND ".join(extra_conds)) if extra_conds else ""
 
     # ── Rama FTS5 (query no vacío) ──────────────────────────────────────────
@@ -952,11 +952,12 @@ def get_inflation_index(days: int = 30) -> dict:
 
 
 def get_categories() -> list[str]:
-    """Lista de categorías únicas con al menos un producto."""
+    """Lista de categorías únicas con al menos un producto activo."""
     sql = """
         SELECT DISTINCT category
         FROM products
         WHERE category IS NOT NULL AND TRIM(category) != ''
+          AND status = 'active'
         ORDER BY category
     """
     with get_db() as conn:
@@ -977,7 +978,7 @@ def get_stores_summary() -> list[sqlite3.Row]:
             s.base_url,
             s.scraper_type,
             s.active,
-            COUNT(DISTINCT p.id)  AS total_products,
+            COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.id END) AS total_products,
             MAX(ph.scraped_at)    AS last_scraped_at
         FROM stores s
         LEFT JOIN products p     ON p.store_id  = s.id

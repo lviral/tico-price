@@ -79,10 +79,7 @@ def run_smoke(base_url, results):
         try:
             page.goto(base_url, wait_until="networkidle", timeout=15000)
             # Esperar que el spinner de trending desaparezca
-            page.wait_for_function(
-                "!document.querySelector('#trending-grid .spinner')",
-                timeout=10000
-            )
+            page.locator("#trending-grid .spinner").wait_for(state="hidden", timeout=10000)
             cards = page.query_selector_all(".product-card")
             if cards:
                 ok(f"{len(cards)} productos cargados en trending")
@@ -91,11 +88,8 @@ def run_smoke(base_url, results):
                 page.fill("#search-input", "samsung")
                 # Esperar debounce (350ms) + que arranque y termine la búsqueda
                 page.wait_for_timeout(500)
-                page.wait_for_function(
-                    "document.querySelector('#search-results-section:not(.hidden)') && "
-                    "!document.querySelector('#products-grid .spinner')",
-                    timeout=10000
-                )
+                page.locator("#search-results-section").wait_for(state="visible", timeout=10000)
+                page.locator("#products-grid .spinner").wait_for(state="hidden", timeout=10000)
                 cards = page.query_selector_all(".product-card")
                 if cards:
                     ok(f"Trending vacío (normal sin datos 7d), búsqueda OK: {len(cards)} productos")
@@ -116,11 +110,8 @@ def run_smoke(base_url, results):
             if not cards:
                 page.fill("#search-input", "lg")
                 page.wait_for_timeout(500)
-                page.wait_for_function(
-                    "document.querySelector('#search-results-section:not(.hidden)') && "
-                    "!document.querySelector('#products-grid .spinner')",
-                    timeout=10000
-                )
+                page.locator("#search-results-section").wait_for(state="visible", timeout=10000)
+                page.locator("#products-grid .spinner").wait_for(state="hidden", timeout=10000)
                 cards = page.query_selector_all(".product-card")
 
             # Buscar un producto que tenga historial (intentar varios)
@@ -129,11 +120,7 @@ def run_smoke(base_url, results):
             for card in cards[:5]:
                 card.click()
                 page.wait_for_selector(".modal-overlay.open", timeout=5000)
-                page.wait_for_function(
-                    "document.getElementById('modal-body')?.querySelector('.stats-row, .empty, .spinner') && "
-                    "!document.getElementById('modal-body')?.querySelector('.spinner')",
-                    timeout=10000
-                )
+                page.locator("#modal-body .spinner").wait_for(state="hidden", timeout=10000)
                 # Esperar un frame para que el chart se inicialice
                 page.wait_for_timeout(300)
 
@@ -169,15 +156,19 @@ def run_smoke(base_url, results):
 
         except Exception as e:
             fail(f"Error en modal/chart: {e}")
+            # Cerrar modal si quedó abierto para no bloquear los pasos siguientes
+            try:
+                if page.query_selector(".modal-overlay.open"):
+                    page.keyboard.press("Escape")
+                    page.wait_for_timeout(400)
+            except Exception:
+                pass
 
         # ── 3. Página Ofertas ────────────────────────────────────────────
         print("\n[3] Página Ofertas")
         try:
             page.click('button[data-view="view-deals"]')
-            page.wait_for_function(
-                "!document.querySelector('#deals-grid .spinner')",
-                timeout=10000
-            )
+            page.locator("#deals-grid .spinner").wait_for(state="hidden", timeout=10000)
             cards = page.query_selector_all("#deals-grid .product-card")
             if cards:
                 ok(f"{len(cards)} ofertas cargadas como cards")

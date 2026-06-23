@@ -1,0 +1,16 @@
+[Unit]
+Description=PrecioTracker CR — Backup diario de la base de datos
+After=network.target
+
+[Service]
+Type=oneshot
+User=preciotracker
+WorkingDirectory=/opt/precio-tracker
+Environment="DB_PATH=/opt/precio-tracker/db/prices.db"
+Environment="BACKUP_DIR=/opt/precio-tracker/backups"
+Environment="KEEP_DAYS=7"
+ExecStart=/opt/precio-tracker/scripts/backup_db.sh
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=precio-tracker-backup

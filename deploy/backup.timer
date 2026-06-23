@@ -1,0 +1,13 @@
+[Unit]
+Description=PrecioTracker CR — Timer de backup diario
+Requires=precio-tracker-backup.service
+
+[Timer]
+# 3:00 AM hora de Costa Rica (UTC-6 = 09:00 UTC)
+# Elegido para no solapar con los scrapes de 00:00 y 12:00 UTC
+OnCalendar=*-*-* 09:00:00 UTC
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

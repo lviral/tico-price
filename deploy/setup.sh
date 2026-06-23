@@ -76,10 +76,17 @@ sed "s|TU_DOMINIO|$DOMAIN|g" deploy/api.service     > /etc/systemd/system/precio
 sed "s|TU_DOMINIO|$DOMAIN|g" deploy/Caddyfile        > /etc/caddy/Caddyfile
 cp deploy/scraper.service /etc/systemd/system/precio-tracker-scraper.service
 cp deploy/scraper.timer   /etc/systemd/system/precio-tracker-scraper.timer
+cp deploy/backup.service  /etc/systemd/system/precio-tracker-backup.service
+cp deploy/backup.timer    /etc/systemd/system/precio-tracker-backup.timer
+
+# Directorio de backups con permisos del usuario de la app
+mkdir -p "$APP_DIR/backups"
+chown "$APP_USER:$APP_USER" "$APP_DIR/backups"
 
 systemctl daemon-reload
 systemctl enable --now precio-tracker-api
 systemctl enable --now precio-tracker-scraper.timer
+systemctl enable --now precio-tracker-backup.timer
 systemctl enable --now caddy
 
 echo ""
@@ -91,6 +98,8 @@ echo "  Web:     https://$DOMAIN"
 echo ""
 echo "  Logs API:    journalctl -u precio-tracker-api -f"
 echo "  Logs Cron:   journalctl -u precio-tracker-scraper -f"
+echo "  Logs Backup: journalctl -u precio-tracker-backup -f"
+echo "  Backups:     $APP_DIR/backups/"
 echo ""
 echo "  Primer scrape (puede tardar ~10 min):"
 echo "  sudo -u $APP_USER $APP_DIR/.venv/bin/python $APP_DIR/run.py --once"
