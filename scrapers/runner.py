@@ -11,6 +11,7 @@ from db.database import (
     get_active_stores,
     get_consecutive_failures,
     init_db,
+    mark_products_discontinued,
     mark_store_attention,
     record_scrape_run,
     reset_store_status,
@@ -374,6 +375,10 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
             res = StoreResult(store_name=store["name"], errors=1)
         finished_at = datetime.now().isoformat(timespec="seconds")
         _record_and_alert(store["id"], store["name"], started_at, finished_at, res)
+        if res.prices_recorded > 0 and res.errors == 0:
+            n = mark_products_discontinued(store["id"], started_at)
+            if n:
+                log.info("  %s: %d producto(s) marcado(s) como discontinued", store["name"], n)
         results.append(res)
 
     # -----------------------------------------------------------------------

@@ -50,6 +50,8 @@ def init_db() -> None:
             "CHECK (status IN ('active', 'requires_attention'))",
             "ALTER TABLE products ADD COLUMN image_url TEXT",
             "ALTER TABLE products ADD COLUMN last_seen_at TEXT",
+            "ALTER TABLE products ADD COLUMN status TEXT NOT NULL DEFAULT 'active' "
+            "CHECK (status IN ('active', 'discontinued'))",
         ]:
             try:
                 conn.execute(migration)
@@ -240,7 +242,7 @@ def upsert_product(
     if existing:
         conn.execute(
             "UPDATE products SET name = ?, url = ?, category = ?, image_url = ?, "
-            "last_seen_at = datetime('now') WHERE id = ?",
+            "last_seen_at = datetime('now'), status = 'active' WHERE id = ?",
             (name, url, category, image_url, existing["id"]),
         )
         return existing["id"], False
@@ -387,6 +389,30 @@ def reset_store_status(store_id: int) -> None:
         )
 
 
+def mark_products_discontinued(store_id: int, run_started_at: str) -> int:
+    """Marca como 'discontinued' los productos de una tienda no vistos en el último scrape.
+
+    Se llama después de un scrape exitoso: cualquier producto de esa tienda cuyo
+    last_seen_at sea anterior a run_started_at no apareció en la corrida y se
+    considera descatalogado. Si reaparece en un futuro scrape, upsert_product lo
+    reactiva automáticamente (status='active').
+
+    Returns el número de productos marcados.
+    """
+    with get_db() as conn:
+        cur = conn.execute(
+            """
+            UPDATE products
+               SET status = 'discontinued'
+             WHERE store_id = ?
+               AND status  = 'active'
+               AND (last_seen_at IS NULL OR last_seen_at < ?)
+            """,
+            (store_id, run_started_at),
+        )
+        return cur.rowcount
+
+
 def get_active_stores(scraper_type: str | None = None) -> list[sqlite3.Row]:
     sql = "SELECT * FROM stores WHERE active = 1"
     params: tuple = ()
@@ -499,7 +525,10 @@ def search_products(
 
     price_dir = "DESC" if sort == "price-desc" else "ASC"
 
-    extra_conds: list[str] = ["(p.last_seen_at IS NULL OR p.last_seen_at >= datetime('now', '-14 days'))"]
+    extra_conds: list[str] = [
+        "(p.last_seen_at IS NULL OR p.last_seen_at >= datetime('now', '-14 days'))",
+        "p.status = 'active'",
+    ]
     extra_params: list = []
     if category:
         extra_conds.append("p.category LIKE ?")
@@ -614,6 +643,7 @@ def get_top_increases(days: int = 7, limit: int = 50) -> list[sqlite3.Row]:
         WHERE latest.price > 0
           AND old_ph.price > 0
           AND latest.price > old_ph.price
+          AND p.status = 'active'
         ORDER BY change_pct DESC
         LIMIT ?
     """
@@ -723,6 +753,7 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
           AND stats.sample_count >= 3
           AND latest.price >= stats.price_avg * 0.4
           AND p.last_seen_at >= datetime('now', '-14 days')
+          AND p.status = 'active'
         ORDER BY real_discount DESC
         LIMIT ?
     """
@@ -799,6 +830,7 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
           AND latest.price > 0
           AND stats.sample_count >= 3
           AND p.last_seen_at >= datetime('now', '-7 days')
+          AND p.status = 'active'
         ORDER BY announced_discount DESC
         LIMIT ?
     """
