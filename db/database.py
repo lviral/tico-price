@@ -733,14 +733,18 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
 def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
     """Productos con descuento anunciado por la tienda comparado contra historial real.
 
-    Veredicto:
-      real    — descuento real (vs promedio 90d) >= 80 % del anunciado
-      partial — descuento real >= 30 % del anunciado
-      fake    — descuento real < 30 % del anunciado (precio "original" inflado)
+    Veredicto (doble criterio):
+      1. El original_price anunciado debe ser plausible vs el máximo histórico (price_max_90d).
+         Si original_price > price_max * 1.2, el "precio original" nunca fue real → fake.
+      2. El descuento real (precio actual vs promedio 90d) debe ser proporcional al anunciado.
+
+      real    — original plausible (≤ max*1.2)  Y  descuento real >= 80 % del anunciado
+      partial — original no demasiado inflado (≤ max*1.5)  Y  descuento real >= 30 %
+      fake    — original inflado o descuento real < 30 % del anunciado
 
     Columnas: product_id, name, url, category, image_url, store,
-              current_price, original_price, announced_discount,
-              real_discount, sample_count, verdict
+              current_price, original_price, price_max_90d,
+              announced_discount, real_discount, sample_count, verdict
     """
     sql = """
         SELECT
@@ -752,6 +756,7 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
             s.name      AS store,
             latest.price                                                    AS current_price,
             latest.original_price,
+            stats.price_max                                                 AS price_max_90d,
             ROUND(
                 (latest.original_price - latest.price) * 100.0 / latest.original_price,
                 1
@@ -762,11 +767,13 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
             )                                                               AS real_discount,
             stats.sample_count,
             CASE
-                WHEN (stats.price_avg - latest.price) / NULLIF(stats.price_avg, 0)
-                     >= 0.8 * (latest.original_price - latest.price) / latest.original_price
+                WHEN latest.original_price <= stats.price_max * 1.2
+                     AND (stats.price_avg - latest.price) / NULLIF(stats.price_avg, 0)
+                         >= 0.8 * (latest.original_price - latest.price) / latest.original_price
                 THEN 'real'
-                WHEN (stats.price_avg - latest.price) / NULLIF(stats.price_avg, 0)
-                     >= 0.3 * (latest.original_price - latest.price) / latest.original_price
+                WHEN latest.original_price <= stats.price_max * 1.5
+                     AND (stats.price_avg - latest.price) / NULLIF(stats.price_avg, 0)
+                         >= 0.3 * (latest.original_price - latest.price) / latest.original_price
                 THEN 'partial'
                 ELSE 'fake'
             END                                                             AS verdict
@@ -781,6 +788,7 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
             SELECT
                 product_id,
                 AVG(price)  AS price_avg,
+                MAX(price)  AS price_max,
                 COUNT(*)    AS sample_count
             FROM price_history
             WHERE scraped_at >= datetime('now', '-90 days')

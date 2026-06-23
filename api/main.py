@@ -201,6 +201,7 @@ class PriceCheckItem(BaseModel):
     store: str
     current_price: float
     original_price: float
+    price_max_90d: float = Field(description="Precio máximo real registrado en 90 días")
     announced_discount: float = Field(description="Descuento anunciado por la tienda (%)")
     real_discount: float = Field(description="Descuento real vs promedio histórico 90d (%)")
     sample_count: int
@@ -409,6 +410,7 @@ def price_check(
             store=r["store"],
             current_price=r["current_price"],
             original_price=r["original_price"],
+            price_max_90d=r["price_max_90d"],
             announced_discount=r["announced_discount"] or 0.0,
             real_discount=r["real_discount"] or 0.0,
             sample_count=r["sample_count"],
