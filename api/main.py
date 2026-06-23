@@ -183,6 +183,7 @@ class DealItem(BaseModel):
     url: str
     category: str | None
     store: str
+    image_url: str | None = None
     current_price: float
     price_max_90d: float = Field(description="Precio máximo en la ventana de 90 días")
     price_avg_90d: float = Field(description="Precio promedio en la ventana de 90 días")
@@ -355,6 +356,7 @@ def deals(
             url=r["url"],
             category=r["category"],
             store=r["store_name"],
+            image_url=r["image_url"],
             current_price=r["current_price"],
             price_max_90d=r["price_max_90d"],
             price_avg_90d=r["price_avg_90d"] or r["current_price"],
