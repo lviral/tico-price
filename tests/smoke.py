@@ -175,26 +175,30 @@ def run_smoke(base_url, results):
         try:
             page.click('button[data-view="view-deals"]')
             page.wait_for_function(
-                "!document.querySelector('#deals-tbody .spinner')",
+                "!document.querySelector('#deals-grid .spinner')",
                 timeout=10000
             )
-            rows = page.query_selector_all("#deals-tbody tr")
-            if rows:
-                ok(f"{len(rows)} ofertas cargadas")
-                cells = rows[0].query_selector_all("td")
-                if len(cells) == 5:
-                    ok("Columnas correctas (5: Producto, Precio, Máx 90d, Bajada, Registros)")
+            cards = page.query_selector_all("#deals-grid .product-card")
+            if cards:
+                ok(f"{len(cards)} ofertas cargadas como cards")
+                first = cards[0]
+                has_img = first.query_selector(".card-img, .card-img-placeholder")
+                has_price = first.query_selector(".card-price")
+                has_discount = first.query_selector(".badge-discount")
+                if has_img and has_price:
+                    ok("Cards con imagen y precio")
                 else:
-                    fail(f"Columnas incorrectas: esperaba 5, tiene {len(cells)}")
-
-                # Verificar que real_discount tiene valor real (no 0%)
-                import re
-                discount_cell = cells[3].inner_text() if len(cells) > 3 else ""
-                match = re.search(r"([\d.]+)%", discount_cell)
-                if match and float(match.group(1)) > 0:
-                    ok(f"Bajada real calculada: {discount_cell.strip()}")
+                    fail("Card sin imagen o precio")
+                if has_discount:
+                    import re
+                    pct_text = has_discount.inner_text()
+                    match = re.search(r"([\d.]+)%", pct_text)
+                    if match and float(match.group(1)) > 0:
+                        ok(f"Bajada real en badge: {pct_text.strip()}")
+                    else:
+                        fail(f"Badge de descuento sin valor: '{pct_text.strip()}'")
                 else:
-                    fail(f"Bajada muestra 0% o sin valor: '{discount_cell.strip()}'")
+                    warn("Sin badge de descuento visible (puede ser normal)")
             else:
                 warn("No hay ofertas — puede ser normal si no hay suficiente historial")
         except Exception as e:

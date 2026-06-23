@@ -687,6 +687,7 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
             p.name  AS product_name,
             p.url,
             p.category,
+            p.image_url,
             s.name  AS store_name,
             latest.price                                   AS current_price,
             stats.price_max                                AS price_max_90d,
