@@ -137,10 +137,16 @@
     <p class="section-title" id="pricecheck-summary"></p>
     <div class="pricecheck-filter" id="pricecheck-filter">
       <button class="pill pill-active" data-verdict="all">Todas</button>
-      <button class="pill" data-verdict="fake">🔴 Infladas</button>
+      <button class="pill" data-verdict="fake">🔴 Sin historial</button>
       <button class="pill" data-verdict="partial">🟡 Parciales</button>
-      <button class="pill" data-verdict="real">🟢 Reales</button>
+      <button class="pill" data-verdict="real">🟢 Verificadas</button>
     </div>
+    <p class="pricecheck-disclaimer">
+      Los veredictos se basan en el historial de precios registrado por TicoPrice.
+      Productos con menos de 30 días de historial pueden clasificarse como "Sin historial previo"
+      aunque el descuento sea legítimo. TicoPrice no afirma que ninguna tienda actúe de forma fraudulenta;
+      presentamos datos factuales para que cada usuario saque sus propias conclusiones.
+    </p>
     <div id="pricecheck-grid" class="products-grid"></div>
   </div>
 
