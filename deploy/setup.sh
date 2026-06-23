@@ -23,7 +23,7 @@ echo "[1/7] Instalando dependencias del sistema..."
 apt-get update -qq
 apt-get install -y -qq \
     python3.12 python3.12-venv python3-pip \
-    git curl wget unzip
+    git curl wget unzip sqlite3
 
 # Caddy (reverse proxy con HTTPS automático)
 if ! command -v caddy &>/dev/null; then
