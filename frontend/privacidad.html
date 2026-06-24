@@ -16,6 +16,12 @@
     .legal-date{font-size:.78rem;color:var(--text-muted);margin-bottom:2rem}
     .back-link{display:inline-block;margin-bottom:1.5rem;color:var(--primary);font-size:.88rem}
   </style>
+  <script>
+    (function(){
+      var t=localStorage.getItem("theme"),d=window.matchMedia("(prefers-color-scheme:dark)").matches;
+      document.documentElement.setAttribute("data-theme",t||(d?"dark":"light"));
+    })();
+  </script>
 </head>
 <body>
 <header>
@@ -43,30 +49,30 @@
     <p>TicoPrice <strong>no recopila datos personales de los usuarios</strong>. Específicamente:</p>
     <ul>
       <li>No hay registro de usuarios ni formularios de suscripción.</li>
-      <li>No usamos cookies de rastreo ni herramientas de analítica de terceros (Google Analytics, Facebook Pixel, etc.).</li>
-      <li>La función de <em>Favoritos</em> guarda datos exclusivamente en el almacenamiento local de tu navegador (<code>localStorage</code>). Esos datos nunca se envían a nuestros servidores.</li>
+      <li>No usamos cookies de rastreo ni herramientas de analítica de terceros.</li>
+      <li>La función de <em>Favoritos</em> guarda datos exclusivamente en el almacenamiento local de tu navegador. Esos datos nunca se envían a nuestros servidores.</li>
     </ul>
 
     <h2>3. Logs de acceso del servidor</h2>
-    <p>Nuestro servidor web (Caddy) genera automáticamente registros de acceso que incluyen:</p>
+    <p>Nuestro servidor genera automáticamente registros de acceso que incluyen:</p>
     <ul>
       <li>Dirección IP del visitante</li>
       <li>Fecha y hora de la solicitud</li>
       <li>URL solicitada</li>
       <li>Código de respuesta HTTP</li>
     </ul>
-    <p>Estos registros se usan exclusivamente para diagnóstico técnico y detección de abusos. Se almacenan en el servidor (Hetzner, Alemania) y se rotan automáticamente cuando alcanzan 10 MB, conservando un máximo de 5 archivos. No se comparten con terceros.</p>
-    <p>La dirección IP es un dato personal según el RGPD (Reglamento General de Protección de Datos de la UE) y la Ley 8968 de Costa Rica. La base legal para este tratamiento es el <em>interés legítimo</em> de seguridad e integridad del servicio (Art. 6.1.f del RGPD).</p>
+    <p>Estos registros se usan exclusivamente para diagnóstico técnico y detección de abusos. Se eliminan automáticamente de forma periódica y no se comparten con terceros.</p>
+    <p>La dirección IP es un dato personal según el RGPD y la Ley 8968 de Costa Rica. La base legal para este tratamiento es el interés legítimo de seguridad e integridad del servicio.</p>
 
-    <h2>4. Imágenes y contenido de terceros</h2>
-    <p>Las imágenes de productos se cargan directamente desde los servidores de las tiendas correspondientes. TicoPrice utiliza el atributo <code>referrerpolicy="no-referrer"</code> para no revelar la URL de origen al servidor de la tienda al cargar estas imágenes.</p>
+    <h2>4. Imágenes de productos</h2>
+    <p>Las imágenes de productos se cargan directamente desde los servidores de las tiendas correspondientes. TicoPrice configura las solicitudes para no revelar la URL de origen al servidor de la tienda al cargar estas imágenes.</p>
 
     <h2>5. Tus derechos</h2>
     <p>Bajo el RGPD y la Ley 8968, tenés derecho a solicitar acceso, rectificación o eliminación de datos personales. Dado que solo procesamos IPs en logs temporales y no tenemos forma de asociarlos a personas, podemos orientarte sobre el proceso si contactás a:</p>
     <p><strong>datos@ticoprice.app</strong></p>
 
     <h2>6. Retención de datos</h2>
-    <p>Los logs de acceso se eliminan automáticamente al rotar (máximo ~50 MB / algunos días de historial según el tráfico). No conservamos ningún otro dato de usuarios.</p>
+    <p>Los logs de acceso se eliminan automáticamente de forma periódica. No conservamos ningún otro dato de usuarios.</p>
 
     <h2>7. Cambios a esta política</h2>
     <p>Cualquier cambio relevante se reflejará en la fecha de actualización al inicio de esta página.</p>
