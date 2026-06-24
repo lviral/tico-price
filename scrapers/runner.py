@@ -362,7 +362,8 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
     results: list[StoreResult] = []
 
     for store in stores:
-        started_at = datetime.now().isoformat(timespec="seconds")
+        # Formato SQLite (espacio, no T) para que last_seen_at < started_at funcione correctamente
+        started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             res = run_store(
                 store_id=store["id"],
@@ -373,7 +374,7 @@ def run_all(store_names: list[str] | None = None) -> list[StoreResult]:
         except Exception as exc:
             log.exception("Error inesperado scrapeando '%s': %s", store["name"], exc)
             res = StoreResult(store_name=store["name"], errors=1)
-        finished_at = datetime.now().isoformat(timespec="seconds")
+        finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         _record_and_alert(store["id"], store["name"], started_at, finished_at, res)
         if res.prices_recorded > 0 and res.errors == 0:
             n = mark_products_discontinued(store["id"], started_at)
