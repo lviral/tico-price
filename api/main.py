@@ -599,6 +599,11 @@ def privacy_page() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "privacidad.html")
 
 
+@app.get("/terminos", include_in_schema=False)
+def terms_page() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "terminos.html")
+
+
 @app.get("/sw.js", include_in_schema=False)
 def service_worker():
     return FileResponse(FRONTEND_DIR / "static" / "js" / "sw.js",
