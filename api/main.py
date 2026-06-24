@@ -594,6 +594,11 @@ def sitemap_xml() -> Response:
     return Response(content=xml, media_type="application/xml")
 
 
+@app.get("/privacidad", include_in_schema=False)
+def privacy_page() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "privacidad.html")
+
+
 @app.get("/sw.js", include_in_schema=False)
 def service_worker():
     return FileResponse(FRONTEND_DIR / "static" / "js" / "sw.js",

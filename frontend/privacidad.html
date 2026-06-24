@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidad — TicoPrice</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .legal-wrap{max-width:720px;margin:2rem auto;padding:0 1.25rem 4rem}
+    .legal-wrap h1{font-size:1.5rem;margin-bottom:.25rem}
+    .legal-wrap h2{font-size:1.05rem;margin-top:2rem;margin-bottom:.4rem;color:var(--text)}
+    .legal-wrap p,.legal-wrap li{color:var(--text-muted);line-height:1.7;font-size:.92rem}
+    .legal-wrap ul{padding-left:1.25rem}
+    .legal-date{font-size:.78rem;color:var(--text-muted);margin-bottom:2rem}
+    .back-link{display:inline-block;margin-bottom:1.5rem;color:var(--primary);font-size:.88rem}
+  </style>
+</head>
+<body>
+<header>
+  <a href="/" class="header-brand" style="text-decoration:none">
+    <div class="logo-wrap">
+      <img src="/static/img/favicon.svg" alt="TicoPrice" class="logo-icon">
+      <div>
+        <div class="logo">Tico<span>Price</span></div>
+        <div class="tagline">Precios en tiempo real · 9 tiendas · Costa Rica</div>
+      </div>
+    </div>
+  </a>
+</header>
+
+<main>
+  <div class="legal-wrap">
+    <a href="/" class="back-link">← Volver</a>
+    <h1>Política de Privacidad</h1>
+    <p class="legal-date">Última actualización: junio 2026</p>
+
+    <h2>1. Quiénes somos</h2>
+    <p>TicoPrice (<strong>ticoprice.app</strong>) es un servicio de monitoreo de precios de productos en tiendas de Costa Rica. Operado de forma independiente, sin afiliación con ninguna de las tiendas listadas.</p>
+
+    <h2>2. Datos que recopilamos</h2>
+    <p>TicoPrice <strong>no recopila datos personales de los usuarios</strong>. Específicamente:</p>
+    <ul>
+      <li>No hay registro de usuarios ni formularios de suscripción.</li>
+      <li>No usamos cookies de rastreo ni herramientas de analítica de terceros (Google Analytics, Facebook Pixel, etc.).</li>
+      <li>La función de <em>Favoritos</em> guarda datos exclusivamente en el almacenamiento local de tu navegador (<code>localStorage</code>). Esos datos nunca se envían a nuestros servidores.</li>
+    </ul>
+
+    <h2>3. Logs de acceso del servidor</h2>
+    <p>Nuestro servidor web (Caddy) genera automáticamente registros de acceso que incluyen:</p>
+    <ul>
+      <li>Dirección IP del visitante</li>
+      <li>Fecha y hora de la solicitud</li>
+      <li>URL solicitada</li>
+      <li>Código de respuesta HTTP</li>
+    </ul>
+    <p>Estos registros se usan exclusivamente para diagnóstico técnico y detección de abusos. Se almacenan en el servidor (Hetzner, Alemania) y se rotan automáticamente cuando alcanzan 10 MB, conservando un máximo de 5 archivos. No se comparten con terceros.</p>
+    <p>La dirección IP es un dato personal según el RGPD (Reglamento General de Protección de Datos de la UE) y la Ley 8968 de Costa Rica. La base legal para este tratamiento es el <em>interés legítimo</em> de seguridad e integridad del servicio (Art. 6.1.f del RGPD).</p>
+
+    <h2>4. Imágenes y contenido de terceros</h2>
+    <p>Las imágenes de productos se cargan directamente desde los servidores de las tiendas correspondientes. TicoPrice utiliza el atributo <code>referrerpolicy="no-referrer"</code> para no revelar la URL de origen al servidor de la tienda al cargar estas imágenes.</p>
+
+    <h2>5. Tus derechos</h2>
+    <p>Bajo el RGPD y la Ley 8968, tenés derecho a solicitar acceso, rectificación o eliminación de datos personales. Dado que solo procesamos IPs en logs temporales y no tenemos forma de asociarlos a personas, podemos orientarte sobre el proceso si contactás a:</p>
+    <p><strong>datos@ticoprice.app</strong></p>
+
+    <h2>6. Retención de datos</h2>
+    <p>Los logs de acceso se eliminan automáticamente al rotar (máximo ~50 MB / algunos días de historial según el tráfico). No conservamos ningún otro dato de usuarios.</p>
+
+    <h2>7. Cambios a esta política</h2>
+    <p>Cualquier cambio relevante se reflejará en la fecha de actualización al inicio de esta página.</p>
+
+    <h2>8. Contacto</h2>
+    <p>Para consultas sobre privacidad o para solicitar corrección de datos erróneos sobre productos o tiendas:<br>
+    <strong>datos@ticoprice.app</strong></p>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-bottom">
+    <p>© 2026 TicoPrice · <a href="/privacidad" style="color:var(--text-muted)">Política de privacidad</a></p>
+  </div>
+</footer>
+</body>
+</html>
