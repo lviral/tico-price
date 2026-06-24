@@ -828,6 +828,7 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
         WHERE latest.original_price IS NOT NULL
           AND latest.original_price > latest.price
           AND latest.price > 0
+          AND (latest.original_price - latest.price) * 100.0 / latest.original_price >= 3.0
           AND stats.sample_count >= 3
           AND p.last_seen_at >= datetime('now', '-7 days')
           AND p.status = 'active'
