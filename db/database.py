@@ -770,11 +770,15 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
     Veredicto (doble criterio):
       1. El original_price anunciado debe ser plausible vs el máximo histórico (price_max_90d).
          Si original_price > price_max * 1.2, el "precio original" nunca fue real → fake.
-      2. El descuento real (precio actual vs promedio 90d) debe ser proporcional al anunciado.
+      2. El descuento real se mide vs price_max (no vs avg) para no penalizar productos que
+         llevan tiempo en oferta — si el avg ya bajó al precio de oferta, el avg-based discount
+         se acerca a 0% aunque la bajada sea genuina.
 
-      real    — original plausible (≤ max*1.2)  Y  descuento real >= 80 % del anunciado
-      partial — original no demasiado inflado (≤ max*1.5)  Y  descuento real >= 30 %
-      fake    — original inflado o descuento real < 30 % del anunciado
+      real    — original plausible (≤ max*1.2)  Y  (max - actual)/max >= 80 % del anunciado
+      partial — original no demasiado inflado (≤ max*1.5)  Y  (max - actual)/max >= 30 %
+      fake    — original inflado o la bajada desde el máximo < 30 % del anunciado
+
+    real_discount columna (para mostrar al usuario): (avg - actual) / avg  → ahorro vs precio típico.
 
     Columnas: product_id, name, url, category, image_url, store,
               current_price, original_price, price_max_90d,
@@ -802,11 +806,11 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
             stats.sample_count,
             CASE
                 WHEN latest.original_price <= stats.price_max * 1.2
-                     AND (stats.price_avg - latest.price) / NULLIF(stats.price_avg, 0)
+                     AND (stats.price_max - latest.price) / NULLIF(stats.price_max, 0)
                          >= 0.8 * (latest.original_price - latest.price) / latest.original_price
                 THEN 'real'
                 WHEN latest.original_price <= stats.price_max * 1.5
-                     AND (stats.price_avg - latest.price) / NULLIF(stats.price_avg, 0)
+                     AND (stats.price_max - latest.price) / NULLIF(stats.price_max, 0)
                          >= 0.3 * (latest.original_price - latest.price) / latest.original_price
                 THEN 'partial'
                 ELSE 'fake'
