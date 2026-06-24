@@ -18,6 +18,18 @@ from typing import Annotated
 
 log = logging.getLogger(__name__)
 
+_CACHE: dict[str, tuple[float, object]] = {}
+_CACHE_TTL = 60  # segundos
+
+def _cache_get(key: str):
+    entry = _CACHE.get(key)
+    if entry and (time.time() - entry[0]) < _CACHE_TTL:
+        return entry[1]
+    return None
+
+def _cache_set(key: str, value: object) -> None:
+    _CACHE[key] = (time.time(), value)
+
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, Response
@@ -365,8 +377,12 @@ def deals(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=200, description="Máximo de resultados")] = 50,
 ) -> list[DealItem]:
+    key = f"deals:{limit}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
     rows = get_deals(limit=limit)
-    return [
+    result = [
         DealItem(
             product_id=r["product_id"],
             name=r["product_name"],
@@ -382,6 +398,8 @@ def deals(
         )
         for r in rows
     ]
+    _cache_set(key, result)
+    return result
 
 
 @app.get(
@@ -399,8 +417,12 @@ def price_check(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=500, description="Máximo de resultados")] = 300,
 ) -> list[PriceCheckItem]:
+    key = f"price-check:{limit}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
     rows = get_price_check(limit=limit)
-    return [
+    result = [
         PriceCheckItem(
             product_id=r["product_id"],
             name=r["name"],
@@ -418,6 +440,8 @@ def price_check(
         )
         for r in rows
     ]
+    _cache_set(key, result)
+    return result
 
 
 @app.get(
@@ -436,8 +460,12 @@ def trending(
     days: Annotated[int, Query(ge=1, le=90, description="Ventana de días a comparar")] = 7,
     limit: Annotated[int, Query(ge=1, le=200, description="Máximo de resultados")] = 50,
 ) -> list[ProductSummary]:
+    key = f"trending:{days}:{limit}"
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached
     rows = get_top_increases(days=days, limit=limit)
-    return [
+    result = [
         ProductSummary(
             product_id=r["product_id"],
             sku=r["sku"],
@@ -456,6 +484,8 @@ def trending(
         )
         for r in rows
     ]
+    _cache_set(key, result)
+    return result
 
 
 @app.get(
