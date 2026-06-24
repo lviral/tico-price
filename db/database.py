@@ -705,8 +705,11 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
     Un producto aparece si:
       - El precio actual es ≤ 1 % por encima de su mínimo histórico (en los 90d disponibles)
       - El máximo histórico supera al mínimo (hubo variación real de precio)
-      - La bajada respecto al máximo es ≥ 5 %
+      - La bajada respecto al promedio 90d es ≥ 5 %
       - Tiene ≥ 3 registros históricos
+      - Visto en los últimos 7 días (mismo que Verificar)
+
+    real_discount = (avg_90d - current) / avg_90d  — misma base que Verificar para coherencia.
 
     Columnas: product_id, product_name, url, category, store_name,
               current_price, price_max_90d, price_avg_90d, real_discount, sample_count
@@ -723,7 +726,7 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
             stats.price_max                                AS price_max_90d,
             ROUND(stats.price_avg, 0)                      AS price_avg_90d,
             ROUND(
-                (stats.price_max - latest.price) * 100.0 / stats.price_max,
+                (stats.price_avg - latest.price) * 100.0 / NULLIF(stats.price_avg, 0),
                 1
             )                                              AS real_discount,
             stats.sample_count
@@ -749,10 +752,10 @@ def get_deals(limit: int = 50) -> list[sqlite3.Row]:
         ) stats ON stats.product_id = p.id
         WHERE latest.price <= stats.price_min * 1.01
           AND stats.price_max > stats.price_min
-          AND ROUND((stats.price_max - latest.price) * 100.0 / stats.price_max, 1) >= 5.0
+          AND ROUND((stats.price_avg - latest.price) * 100.0 / NULLIF(stats.price_avg, 0), 1) >= 5.0
           AND stats.sample_count >= 3
           AND latest.price >= stats.price_avg * 0.4
-          AND p.last_seen_at >= datetime('now', '-14 days')
+          AND p.last_seen_at >= datetime('now', '-7 days')
           AND p.status = 'active'
         ORDER BY real_discount DESC
         LIMIT ?
