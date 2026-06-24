@@ -7,6 +7,7 @@
   <meta name="robots" content="noindex">
   <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
   <link rel="stylesheet" href="/static/css/style.css">
+  <script src="/static/js/theme.js"></script>
   <style>
     .legal-wrap{max-width:720px;margin:2rem auto;padding:0 1.25rem 4rem}
     .legal-wrap h1{font-size:1.5rem;margin-bottom:.25rem}
@@ -16,12 +17,6 @@
     .legal-date{font-size:.78rem;color:var(--text-muted);margin-bottom:2rem}
     .back-link{display:inline-block;margin-bottom:1.5rem;color:var(--primary);font-size:.88rem}
   </style>
-  <script>
-    (function(){
-      var t=localStorage.getItem("theme"),d=window.matchMedia("(prefers-color-scheme:dark)").matches;
-      document.documentElement.setAttribute("data-theme",t||(d?"dark":"light"));
-    })();
-  </script>
 </head>
 <body>
 <header>
@@ -36,18 +31,6 @@
   </a>
   <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema"></button>
 </header>
-<script>
-  (function(){
-    var btn=document.getElementById("theme-toggle");
-    function apply(t){document.documentElement.setAttribute("data-theme",t);btn.textContent=t==="dark"?"☀️":"🌙";}
-    var saved=localStorage.getItem("theme"),dark=window.matchMedia("(prefers-color-scheme:dark)").matches;
-    apply(saved||(dark?"dark":"light"));
-    btn.addEventListener("click",function(){
-      var next=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
-      localStorage.setItem("theme",next);apply(next);
-    });
-  })();
-</script>
 
 <main>
   <div class="legal-wrap">
