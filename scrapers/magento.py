@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 _UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36 TicoPrice/1.0 (+https://ticoprice.app)"
+    "Chrome/124.0.0.0 Safari/537.36"
 )
 _WAIT_SELECTOR = "li.product-item"
 _WAIT_TIMEOUT_MS = 15_000

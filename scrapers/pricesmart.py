@@ -24,7 +24,7 @@ _ROWS_PER_PAGE = 24
 _UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36 TicoPrice/1.0 (+https://ticoprice.app)"
+    "Chrome/124.0.0.0 Safari/537.36"
 )
 # Bloomreach credentials — set via env vars; defaults are the values embedded in frontend JS
 _ACCOUNT_ID = os.getenv("BLOOMREACH_ACCOUNT_ID", "7024")
