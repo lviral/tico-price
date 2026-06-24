@@ -778,7 +778,8 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
       partial — original no demasiado inflado (≤ max*1.5)  Y  (max - actual)/max >= 30 %
       fake    — original inflado o la bajada desde el máximo < 30 % del anunciado
 
-    real_discount columna (para mostrar al usuario): (avg - actual) / avg  → ahorro vs precio típico.
+    real_discount columna (para mostrar al usuario): (max - actual) / max  → lo que el historial confirma
+    de la bajada real de precio, misma base que el veredicto para que sean coherentes.
 
     Columnas: product_id, name, url, category, image_url, store,
               current_price, original_price, price_max_90d,
@@ -800,7 +801,7 @@ def get_price_check(limit: int = 300) -> list[sqlite3.Row]:
                 1
             )                                                               AS announced_discount,
             ROUND(
-                (stats.price_avg - latest.price) * 100.0 / NULLIF(stats.price_avg, 0),
+                (stats.price_max - latest.price) * 100.0 / NULLIF(stats.price_max, 0),
                 1
             )                                                               AS real_discount,
             stats.sample_count,
